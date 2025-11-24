@@ -9,7 +9,7 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
   type TabType = "login" | "signup"
   const [activeTab, setActiveTab] = useState<TabType>("login")
   const [username, setUsername] = useState<string>("")
-  const [email, setEmail] = useState<string>("zengyihan@gmail.com")
+  const [email, setEmail] = useState<string>("")
   const [password, setPassword] = useState<string>("")
 
   return (
