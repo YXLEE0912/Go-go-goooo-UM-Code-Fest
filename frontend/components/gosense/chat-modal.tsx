@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { MessageCircle, Send, Activity } from "lucide-react"
 import { Card, Input } from "./ui-components"
 import type { Message } from "../../lib/gosense-types"
+import { auth } from "../../lib/api"
 
 export const ChatModal = () => {
   const [showChat, setShowChat] = useState(false)
@@ -22,32 +23,35 @@ What would you like to know?`,
     },
   ])
   const [input, setInput] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  const handleSendMessage = () => {
-    if (!input.trim()) return
+  const handleSendMessage = async () => {
+    if (!input.trim() || loading) return
 
     const userMessage = { type: "user" as const, content: input }
     setMessages((prev) => [...prev, userMessage])
-
-    setTimeout(() => {
-      let aiResponse = ""
-      const lowerInput = input.toLowerCase()
-
-      if (lowerInput.includes("rising") || lowerInput.includes("why")) {
-        aiResponse =
-          "NVIDIA stock is rising due to:\n\n• Strong AI chip demand from major tech companies\n• Data center revenue growth exceeding 40% YoY\n• Positive market sentiment around AI infrastructure\n• Technical indicators showing bullish momentum"
-      } else if (lowerInput.includes("risk")) {
-        aiResponse =
-          "Key risks to consider:\n\n• Market volatility in tech sector\n• Competition from AMD and Intel\n• Regulatory concerns around AI development\n• High valuation metrics (P/E ratio)"
-      } else {
-        aiResponse =
-          "I can provide detailed analysis on:\n\n• Price predictions and trends\n• Market sentiment analysis\n• Risk factors and opportunities\n• Technical and fundamental analysis\n\nWhat specific aspect would you like to explore?"
-      }
-
-      setMessages((prev) => [...prev, { type: "ai", content: aiResponse }])
-    }, 800)
-
     setInput("")
+    setLoading(true)
+
+    try {
+      // Convert messages to history format for API
+      const history = messages.map(m => ({
+        role: m.type === "user" ? "user" : "assistant",
+        content: m.content
+      }))
+
+      const response = await auth.chat(userMessage.content, history)
+      
+      setMessages((prev) => [...prev, { type: "ai", content: response.response }])
+    } catch (error) {
+      console.error("Chat error:", error)
+      setMessages((prev) => [...prev, { 
+        type: "ai", 
+        content: "Sorry, I encountered an error processing your request. Please try again." 
+      }])
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -67,7 +71,7 @@ What would you like to know?`,
             exit={{ opacity: 0, y: -20 }}
             className="fixed bottom-24 right-6 w-96 max-h-[500px] flex flex-col z-50"
           >
-            <Card className="flex-1 flex flex-col overflow-hidden">
+            <Card className="flex-1 flex flex-col overflow-hidden h-[500px]">
               <div className="p-4 border-b border-white/10 flex justify-between items-center">
                 <h3 className="font-semibold text-white">AI Assistant</h3>
                 <button onClick={() => setShowChat(false)} className="text-gray-400 hover:text-white">
@@ -93,6 +97,20 @@ What would you like to know?`,
                     </div>
                   </div>
                 ))}
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center mr-2 mt-1 shrink-0">
+                      <Activity className="w-4 h-4 text-blue-400 animate-pulse" />
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-md text-gray-200 border border-white/10 rounded-2xl rounded-bl-none p-3">
+                      <div className="flex space-x-2">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="p-4 border-t border-white/10">
                 <div className="flex gap-2">
@@ -102,10 +120,12 @@ What would you like to know?`,
                     onChange={(e: any) => setInput(e.target.value)}
                     onKeyPress={(e: any) => e.key === "Enter" && handleSendMessage()}
                     className="flex-1 text-sm py-2"
+                    disabled={loading}
                   />
                   <button
                     onClick={handleSendMessage}
-                    className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    disabled={loading}
+                    className={`p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <Send className="w-4 h-4" />
                   </button>
