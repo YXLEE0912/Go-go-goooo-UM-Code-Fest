@@ -1,4 +1,4 @@
-import GoSenseApp from "../components/gosense"
+import GoSenseApp from "@/components/gosense"
 
 export default function Page() {
   return <GoSenseApp />
