@@ -1,0 +1,98 @@
+/*import readlineSync from 'readline-sync';
+import OpenAI from 'openai';
+import dotenv from 'dotenv';
+import { getYahooNews } from './fetchNews/yahooNews.js';
+import { getGoogleNews } from './fetchNews/googleNews.js';
+
+dotenv.config();
+
+// Initialize OpenAI
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+async function main() {
+  console.log("Welcome to the NVIDIA/Semiconductor Chatbot powered by GoSense! Type 'exit' to quit.");
+
+  const chatHistory = [];
+
+  while (true) {
+    const userInput = readlineSync.question("\nYou: ");
+
+    if (userInput.toLowerCase() === "exit") {
+      console.log("Goodbye!");
+      break;
+    }
+
+    let allNews = [];
+
+    try {
+      // Fetch Yahoo news with debugging
+      let yahooNews = [];
+      try {
+        yahooNews = await getYahooNews();
+      } catch (err) {
+        console.error("Yahoo news fetch failed:", err.message);
+      }
+
+      // Fetch Google news with debugging
+      let googleNews = [];
+      try {
+        googleNews = await getGoogleNews();
+      } catch (err) {
+        console.error("Google news fetch failed:", err.message);
+      }
+
+      allNews = [...yahooNews, ...googleNews];
+      if (allNews.length === 0) {
+        console.warn("No news fetched. Continuing with empty context.");
+      }
+
+    } catch (err) {
+      console.error("Error fetching news:", err);
+    }
+
+    const contextText = allNews.length
+      ? allNews.map((n, i) => `[${i+1}] ${n.title}: ${n.summary} (Source: ${n.provider})`).join('\n')
+      : 'No recent news available.';
+
+    const messages = [
+      {
+        role: "system",
+        content: `
+You are an expert assistant for company management in the semiconductor industry.
+Use the summarized news context and prediction results to provide detailed, actionable recommendations for optimizing operations, investments, and strategies.
+Cite snippet numbers when referencing news.
+Give suggestions such as inventory adjustments, production scheduling, resource allocation, or risk mitigation.
+If the user asks about stock predictions, explain them clearly and provide related management actions.
+If the question is unrelated to NVIDIA or semiconductors, respond: 'I can only answer NVIDIA/semiconductor related questions.'
+`
+      },
+      { role: "system", content: `Context:\n${contextText}` },
+      ...chatHistory.map(([role, content]) => ({ role, content })),
+      { role: "user", content: userInput }
+    ];
+
+    try {
+      // GPT-3.5-turbo for free tier / safer quota
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages
+      });
+
+      const answer = completion.choices[0].message.content;
+      console.log("\nBot:", answer);
+
+      if (allNews.length) {
+        console.log("\nSources:");
+        allNews.forEach((n, i) => console.log(`- [${i+1}] ${n.title} (${n.link}) [${n.provider}]`));
+      }
+
+      chatHistory.push(["user", userInput]);
+      chatHistory.push(["assistant", answer]);
+
+    } catch (error) {
+      console.error("Error generating response from OpenAI:", error);
+    }
+  }
+}
+
+main();*/
