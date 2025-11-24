@@ -5,6 +5,7 @@ import { LoginScreen } from "./login-screen"
 import { DashboardScreen } from "./dashboard-screen"
 import { PredictionScreen } from "./prediction-screen"
 import { SettingsScreen } from "./settings-screen"
+import { ChatModal } from "./chat-modal"
 import type { Language } from "../../lib/gosense-translations"
 import type { PredictionData } from "../../lib/gosense-types"
 import type { Currency } from "../../lib/gosense-currency"
@@ -68,6 +69,7 @@ export default function GoSenseApp() {
           setCurrency={setCurrency}
         />
       )}
+      {currentScreen !== "login" && <ChatModal />}
     </>
   )
 }

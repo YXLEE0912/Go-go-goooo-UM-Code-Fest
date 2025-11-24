@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Optional
 import os
-from openai import OpenAI
+import time
+import google.generativeai as genai
 from ..utils.news import fetch_all_news
 from ..routes.auth import get_current_user
 from ..models.user import User
@@ -21,13 +22,13 @@ class ChatResponse(BaseModel):
     response: str
     sources: Optional[List[dict]] = None
 
-# Initialize OpenAI client
-# Note: In production, you might want to initialize this once in main.py or a dependency
-def get_openai_client():
-    api_key = os.getenv("OPENAI_API_KEY")
+# Initialize Gemini client
+def get_gemini_client():
+    api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-    return OpenAI(api_key=api_key)
+        raise HTTPException(status_code=500, detail="Google API key not configured")
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel('gemini-2.5-flash')
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
@@ -35,7 +36,9 @@ async def chat(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        client = get_openai_client()
+        # print(f"--- Start Chat Request for user: {current_user.email} ---")
+        
+        model = get_gemini_client()
         
         # Fetch news context
         news = await fetch_all_news()
@@ -46,6 +49,8 @@ async def chat(
                 f"[{i+1}] {n['title']}: {n['summary']} ({n['provider']})"
                 for i, n in enumerate(news)
             ])
+        else:
+            context_text = "News fetching is currently unavailable. I'll provide general advice."
 
         system_prompt = f"""You are an expert R&D investment advisor for semiconductor companies (specifically NVIDIA).
 Use the news context below to provide actionable recommendations.
@@ -56,25 +61,24 @@ News Context:
 {context_text}
 """
 
-        messages = [
-            {"role": "system", "content": system_prompt}
-        ]
+        # Build conversation history for Gemini
+        conversation = [system_prompt]
         
         # Add history (limit to last 6 messages to save tokens)
         for msg in request.history[-6:]:
-            messages.append({"role": msg.role, "content": msg.content})
+            if msg.role == "user":
+                conversation.append(f"User: {msg.content}")
+            elif msg.role == "assistant":
+                conversation.append(f"Assistant: {msg.content}")
             
         # Add current user message
-        messages.append({"role": "user", "content": request.message})
+        conversation.append(f"User: {request.message}")
 
-        completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.7,
-            max_tokens=800
-        )
+        # Combine into a single prompt
+        full_prompt = "\n".join(conversation)
 
-        answer = completion.choices[0].message.content
+        response = model.generate_content(full_prompt)
+        answer = response.text
         
         return ChatResponse(
             response=answer,

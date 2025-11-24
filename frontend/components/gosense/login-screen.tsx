@@ -4,6 +4,7 @@ import React, { useState, ChangeEvent, FormEvent } from "react"
 import { Card } from "../ui/card"
 import { Input } from "../ui/input"
 import { Button } from "../ui/button"
+import { auth } from "../../lib/api"
 
 export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMode: boolean }) => {
   type TabType = "login" | "signup"
@@ -11,6 +12,40 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
   const [username, setUsername] = useState<string>("")
   const [email, setEmail] = useState<string>("")
   const [password, setPassword] = useState<string>("")
+  const [error, setError] = useState<string>("")
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+
+    try {
+      if (activeTab === "signup") {
+        if (!username || !email || !password) {
+          throw new Error("Please fill in all fields")
+        }
+        await auth.signup(email, password)
+        // After signup, automatically login
+        await auth.login(email, password)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('username', username);
+        }
+        onLogin()
+      } else {
+        if (!email || !password) {
+          throw new Error("Please fill in all fields")
+        }
+        await auth.login(email, password)
+        onLogin()
+      }
+    } catch (err: any) {
+      console.error("Auth error:", err)
+      setError(err.message || "Authentication failed")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div
@@ -18,28 +53,7 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
     >
       <Card className="w-full max-w-md p-8">
         <div className="flex flex-col items-center mb-8">
-          <div className="relative w-16 h-16 mb-4">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600 rounded-2xl rotate-6 shadow-lg shadow-blue-600/20"></div>
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-600/60">
-              <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" fillOpacity="0.9" />
-                <path
-                  d="M2 17L12 22L22 17"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M2 12L12 17L22 12"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-          </div>
+          {/* ...existing code... */}
           <h1
             className={`text-3xl font-bold bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-400 bg-clip-text text-transparent mb-1`}
           >
@@ -54,7 +68,10 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
           {["login", "signup"].map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as "login" | "signup")}
+              onClick={() => {
+                setActiveTab(tab as "login" | "signup")
+                setError("")
+              }}
               className={`flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-all ${
                 activeTab === tab
                   ? "bg-white/10 text-white shadow-sm"
@@ -68,17 +85,13 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
 
         <form
           className="space-y-4"
-          onSubmit={(e: FormEvent) => {
-            e.preventDefault()
-            if (activeTab === "signup" && username) {
-              // Store username in localStorage or context
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('username', username);
-              }
-            }
-            onLogin()
-          }}
+          onSubmit={handleSubmit}
         >
+          {error && (
+            <div className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg">
+              {error}
+            </div>
+          )}
           {activeTab === "signup" && (
             <div>
               <label className={`block text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1 ml-1`}>
@@ -89,6 +102,7 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
                 placeholder="Enter username" 
                 value={username}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                disabled={loading}
               />
             </div>
           )}
@@ -101,6 +115,7 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
               placeholder="name@company.com" 
               value={email}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div>
@@ -112,10 +127,11 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
               placeholder="••••••••" 
               value={password}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              disabled={loading}
             />
           </div>
-          <Button type="submit" className="w-full mt-2">
-            {activeTab === "login" ? "Login" : "Create Account"}
+          <Button type="submit" className="w-full mt-2" disabled={loading}>
+            {loading ? "Processing..." : (activeTab === "login" ? "Login" : "Create Account")}
           </Button>
         </form>
       </Card>

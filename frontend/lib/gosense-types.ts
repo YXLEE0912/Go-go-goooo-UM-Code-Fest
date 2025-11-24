@@ -19,6 +19,11 @@ export interface Notification {
 export interface Message {
   type: "ai" | "user"
   content: string
+  sources?: {
+    title: string
+    link: string
+    provider: string
+  }[]
 }
 
 export interface PredictionData {

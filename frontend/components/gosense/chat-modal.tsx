@@ -42,7 +42,11 @@ What would you like to know?`,
 
       const response = await auth.chat(userMessage.content, history)
       
-      setMessages((prev) => [...prev, { type: "ai", content: response.response }])
+      setMessages((prev) => [...prev, { 
+        type: "ai", 
+        content: response.response,
+        sources: response.sources 
+      }])
     } catch (error) {
       console.error("Chat error:", error)
       setMessages((prev) => [...prev, { 
@@ -94,6 +98,25 @@ What would you like to know?`,
                       }`}
                     >
                       {msg.content}
+                      {msg.sources && msg.sources.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-white/10">
+                          <p className="text-xs font-semibold mb-2 opacity-70">Sources:</p>
+                          <div className="space-y-2">
+                            {msg.sources.map((source, i) => (
+                              <a 
+                                key={i}
+                                href={source.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block text-xs bg-white/5 hover:bg-white/10 p-2 rounded transition-colors"
+                              >
+                                <div className="font-medium truncate">{source.title}</div>
+                                <div className="text-[10px] opacity-60 mt-0.5">{source.provider}</div>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
