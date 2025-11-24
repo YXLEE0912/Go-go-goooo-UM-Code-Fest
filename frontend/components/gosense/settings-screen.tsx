@@ -270,7 +270,7 @@ export const SettingsScreen = ({
           >
             <ChevronLeft className={`w-5 h-5 ${darkMode ? "text-gray-400" : "text-gray-600"}`} />
           </button>
-          <h1 className={`text-xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>{t("settings")}</h1>
+          <h1 className={`text-xl font-bold ${darkMode ? "text-gray-900" : "text-gray-900"}`}>{t("settings")}</h1>
         </header>
 
         <SettingSection title={t("account")}>
@@ -300,7 +300,7 @@ export const SettingsScreen = ({
                   </div>
                 ) : (
                   <>
-                    <h4 className={`font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>{userName}</h4>
+                    <h4 className={`font-semibold ${darkMode ? "text-gray-900" : "text-gray-900"}`}>{userName}</h4>
                     <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{userEmail}</p>
                   </>
                 )}
@@ -372,28 +372,28 @@ export const SettingsScreen = ({
                 className={`${darkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-900"} border border-white/20 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 style={{ colorScheme: darkMode ? "dark" : "light" }}
               >
-                <option value="Line" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Line" className={darkMode ? "bg-gray-800 text-gray-900" : "bg-white text-gray-900"}>
                   {t("lineChart")}
                 </option>
-                <option value="Bar" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Bar" className={darkMode ? "bg-gray-800 text-gray-900" : "bg-white text-gray-900"}>
                   {t("barChart")}
                 </option>
-                <option value="Area" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Area" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("areaChart")}
                 </option>
-                <option value="Candlestick" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Candlestick" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("candlestickChart")}
                 </option>
-                <option value="Scatter" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Scatter" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("scatterChart")}
                 </option>
-                <option value="Pie" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Pie" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("pieChart")}
                 </option>
-                <option value="Radar" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Radar" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("radarChart")}
                 </option>
-                <option value="Composed" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Composed" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("composedChart")}
                 </option>
               </select>
@@ -409,13 +409,13 @@ export const SettingsScreen = ({
                 className={`${darkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-900"} border border-white/20 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 style={{ colorScheme: darkMode ? "dark" : "light" }}
               >
-                <option value="All" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="All" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("showAll")}
                 </option>
-                <option value="Major" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Major" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("majorOnly")}
                 </option>
-                <option value="Minimal" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Minimal" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("minimal")}
                 </option>
               </select>
@@ -434,13 +434,13 @@ export const SettingsScreen = ({
                 className={`${darkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-900"} border border-white/20 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 style={{ colorScheme: darkMode ? "dark" : "light" }}
               >
-                <option value="English" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="English" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   English
                 </option>
-                <option value="Chinese" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Chinese" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   中文
                 </option>
-                <option value="Spanish" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="Spanish" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   Español
                 </option>
               </select>
@@ -456,19 +456,19 @@ export const SettingsScreen = ({
                 className={`${darkMode ? "bg-white/10 text-white" : "bg-gray-100 text-gray-900"} border border-white/20 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 style={{ colorScheme: darkMode ? "dark" : "light" }}
               >
-                <option value="USD" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="USD" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   USD ($)
                 </option>
-                <option value="EUR" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="EUR" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   EUR (€)
                 </option>
-                <option value="GBP" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="GBP" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   GBP (£)
                 </option>
-                <option value="JPY" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="JPY" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   JPY (¥)
                 </option>
-                <option value="MYR" className={darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-900"}>
+                <option value="MYR" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   MYR (RM)
                 </option>
               </select>

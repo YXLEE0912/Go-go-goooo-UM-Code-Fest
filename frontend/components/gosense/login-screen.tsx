@@ -1,64 +1,16 @@
 "use client"
 
-import { useState } from "react"
-import { Card, Input, Button } from "./ui-components"
-import { auth } from "../../lib/api"
+import React, { useState, ChangeEvent, FormEvent } from "react"
+import { Card } from "../ui/card"
+import { Input } from "../ui/input"
+import { Button } from "../ui/button"
 
 export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMode: boolean }) => {
-  const [activeTab, setActiveTab] = useState<"login" | "signup">("login")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [twoFactorCode, setTwoFactorCode] = useState("")
-  const [showTwoFactorInput, setShowTwoFactorInput] = useState(false)
-  const [showRecovery, setShowRecovery] = useState(false)
-  const [recoveryStep, setRecoveryStep] = useState<"request" | "confirm">("request")
-  const [recoveryCode, setRecoveryCode] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
-
-    try {
-      if (showRecovery) {
-        if (recoveryStep === "request") {
-          await auth.request2FARecovery(email)
-          setRecoveryStep("confirm")
-          setError("Recovery code sent to your email.")
-        } else {
-          await auth.confirm2FARecovery(email, recoveryCode)
-          setShowRecovery(false)
-          setShowTwoFactorInput(false)
-          setRecoveryStep("request")
-          setRecoveryCode("")
-          setError("2FA disabled. Please login with your password.")
-          // Reset to login state
-          setActiveTab("login")
-        }
-      } else if (activeTab === "signup") {
-        // Sign up
-        await auth.signup(email, password)
-        // After signup, automatically login
-        await auth.login(email, password)
-        onLogin()
-      } else {
-        // Login
-        await auth.login(email, password, twoFactorCode)
-        onLogin()
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred"
-      if (errorMessage.includes("Two-factor authentication code required")) {
-        setShowTwoFactorInput(true)
-      } else {
-        setError(errorMessage)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
+  type TabType = "login" | "signup"
+  const [activeTab, setActiveTab] = useState<TabType>("login")
+  const [username, setUsername] = useState<string>("")
+  const [email, setEmail] = useState<string>("")
+  const [password, setPassword] = useState<string>("")
 
   return (
     <div
@@ -116,133 +68,54 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
 
         <form
           className="space-y-4"
-          onSubmit={handleSubmit}
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault()
+            if (activeTab === "signup" && username) {
+              // Store username in localStorage or context
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('username', username);
+              }
+            }
+            onLogin()
+          }}
         >
-          {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-          
-          {!showTwoFactorInput && !showRecovery ? (
-            <>
-              <div>
-                <label className={`block text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1 ml-1`}>
-                  Email
-                </label>
-                <Input
-                  type="email"
-                  placeholder="name@company.com"
-                  value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className={`block text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1 ml-1`}>
-                  Password
-                </label>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </>
-          ) : showRecovery ? (
-            <>
-              <div className="mb-4">
-                <h3 className={`text-lg font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>
-                  {recoveryStep === "request" ? "Recover Account" : "Enter Recovery Code"}
-                </h3>
-                <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                  {recoveryStep === "request" 
-                    ? "Enter your email address to receive a recovery code." 
-                    : `Enter the 6-digit code sent to ${email}.`}
-                </p>
-              </div>
-              
-              {recoveryStep === "request" ? (
-                <div>
-                  <label className={`block text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1 ml-1`}>
-                    Email
-                  </label>
-                  <Input
-                    type="email"
-                    placeholder="name@company.com"
-                    value={email}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className={`block text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1 ml-1`}>
-                    Recovery Code
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="123456"
-                    value={recoveryCode}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRecoveryCode(e.target.value)}
-                    required
-                    maxLength={6}
-                  />
-                </div>
-              )}
-              
-              <button
-                type="button"
-                onClick={() => {
-                  setShowRecovery(false)
-                  setRecoveryStep("request")
-                  setError("")
-                }}
-                className={`text-xs mt-2 ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
-              >
-                Back to Login
-              </button>
-            </>
-          ) : (
+          {activeTab === "signup" && (
             <div>
               <label className={`block text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1 ml-1`}>
-                Two-Factor Authentication Code
+                Username
               </label>
-              <Input
+              <Input 
                 type="text"
-                placeholder="123456"
-                value={twoFactorCode}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTwoFactorCode(e.target.value)}
-                required
-                autoFocus
-                maxLength={6}
+                placeholder="Enter username" 
+                value={username}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
               />
-              <div className="flex justify-between items-center mt-2">
-                <p className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
-                  Enter the 6-digit code from your authenticator app.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowRecovery(true)
-                    setError("")
-                  }}
-                  className={`text-xs ${darkMode ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"}`}
-                >
-                  Lost authenticator?
-                </button>
-              </div>
             </div>
           )}
-
-          <Button className="w-full mt-2" disabled={loading}>
-            {loading ? "Loading..." : (
-              showRecovery 
-                ? (recoveryStep === "request" ? "Send Recovery Code" : "Disable 2FA")
-                : (showTwoFactorInput ? "Verify" : (activeTab === "login" ? "Login" : "Create Account"))
-            )}
+          <div>
+            <label className={`block text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1 ml-1`}>
+              Email
+            </label>
+            <Input 
+              type="email"
+              placeholder="name@company.com" 
+              value={email}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={`block text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1 ml-1`}>
+              Password
+            </label>
+            <Input 
+              type="password" 
+              placeholder="••••••••" 
+              value={password}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            />
+          </div>
+          <Button type="submit" className="w-full mt-2">
+            {activeTab === "login" ? "Login" : "Create Account"}
           </Button>
         </form>
       </Card>

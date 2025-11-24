@@ -18,10 +18,21 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts"
-import { ChevronLeft, ArrowUpRight } from "lucide-react"
-import { Card } from "./ui-components"
+import { ChevronLeft, ArrowUpRight, ArrowDownRight, Bell } from "lucide-react"
+import { Card } from "../ui/card"
+import { Button } from "../ui/button"
 import { ChatModal } from "./chat-modal"
+import { NewsSection } from "./news-section"
 import { generateForecastData } from "../../lib/gosense-data"
+interface EnhancedPredictionData {
+  day: string
+  historical: number | null
+  forecast: number | null
+  changePercent: number
+  displayPrice: number
+  isHistorical: boolean
+}
+
 import type { PredictionData } from "../../lib/gosense-types"
 import { translate, type Language } from "../../lib/gosense-translations"
 import { formatPrice, type Currency } from "../../lib/gosense-currency"
@@ -47,10 +58,44 @@ export const PredictionScreen = ({
     ? generateForecastData(predictionData.historicalData, predictionData.timePeriod)
     : []
 
-  const lastHistoricalPrice = forecastData.find((d) => d.historical !== null)?.historical || 158.45
-  const lastForecastPrice = forecastData[forecastData.length - 1]?.forecast || 170.25
+  // Safely get the last historical and forecast prices with fallbacks
+  const lastHistoricalPrice = forecastData.find((d) => d.historical !== null)?.historical ?? 158.45
+  const lastForecastPrice = forecastData[forecastData.length - 1]?.forecast ?? 170.25
   const predictedChange = lastForecastPrice - lastHistoricalPrice
   const predictedPercent = ((predictedChange / lastHistoricalPrice) * 100).toFixed(2)
+
+  // Calculate percentage changes for each data point with proper null checks
+  const enhancedData: EnhancedPredictionData[] = forecastData.map((item, index, array) => {
+    // Safely get current value with fallback
+    const currentValue = item.historical ?? item.forecast ?? 0
+    
+    // For the first item, return with 0% change
+    if (index === 0) {
+      return {
+        ...item,
+        changePercent: 0,
+        displayPrice: currentValue,
+        isHistorical: item.historical !== null
+      }
+    }
+    
+    // For subsequent items, calculate percentage change
+    const prevItem = array[index - 1]
+    const prevValue = prevItem.historical ?? prevItem.forecast ?? 0
+    
+    // Calculate percentage change, handle division by zero
+    let changePercent = 0
+    if (prevValue !== 0) {
+      changePercent = ((currentValue - prevValue) / prevValue) * 100
+    }
+    
+    return { 
+      ...item, 
+      changePercent: Number(changePercent.toFixed(2)),
+      displayPrice: currentValue,
+      isHistorical: item.historical !== null
+    }
+  })
 
   const t = (key: string) => translate(language, key)
 
@@ -120,7 +165,8 @@ export const PredictionScreen = ({
               </div>
             </Card>
 
-            <Card className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="lg:col-span-2 p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className={`font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
                   {t("priceForecastComparison")}
@@ -458,6 +504,75 @@ export const PredictionScreen = ({
                 </ResponsiveContainer>
               </div>
             </Card>
+            
+            {/* News Section */}
+            <NewsSection darkMode={darkMode} />
+            
+            {/* Price Change Table */}
+            <div className="lg:col-span-3">
+              <Card className="p-6">
+                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {predictionData.timePeriod === 'week' ? 'Daily' : 'Monthly'} Price Changes
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className={`text-left text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <th className="pb-2 font-medium">Date</th>
+                        <th className="pb-2 font-medium text-right">Price</th>
+                        <th className="pb-2 font-medium text-right">Change</th>
+                        <th className="pb-2 font-medium text-right">% Change</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-white/10">
+                      {enhancedData.map((item, index) => {
+                        const price = item.displayPrice ?? 0
+                        const isHistorical = item.isHistorical
+                        const change = item.changePercent || 0
+                        const isPositive = change >= 0
+                        
+                        return (
+                          <tr key={index} className={darkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'}>
+                            <td className="py-3 text-sm">
+                              <div className="flex items-center">
+                                {item.day}
+                                {!isHistorical && (
+                                  <span className="ml-2 px-1.5 py-0.5 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                    Forecast
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 text-sm text-right">
+                              {formatPrice(price, currency)}
+                            </td>
+                            <td className="py-3 text-sm text-right">
+                              {index > 0 && (
+                                <span className={`${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                                  {isPositive ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 text-sm text-right">
+                              {index > 0 && (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                  isPositive 
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
+                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                }`}>
+                                  {isPositive ? '+' : ''}{change.toFixed(2)}%
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          </div>
           </motion.div>
         </div>
 
