@@ -1,39 +1,21 @@
-import fetch from 'node-fetch';
-import dotenv from 'dotenv';
-dotenv.config();
 
-const API_KEY = process.env.YAHOO_API_KEY; // RapidAPI key
-const API_HOST = 'apidojo-yahoo-finance-v1.p.rapidapi.com';
+import Parser from 'rss-parser';
+const parser = new Parser();
 
-export async function getYahooNews(limit = 3) {
+export async function getYahooNews(limit = 5) {
   try {
-    const response = await fetch(
-      `https://${API_HOST}/stock/get-news?region=US&symbol=NVDA`,
-      {
-        method: 'GET',
-        headers: {
-          'X-RapidAPI-Key': API_KEY,
-          'X-RapidAPI-Host': API_HOST
-        }
-      }
-    );
+    const feed = await parser.parseURL("https://finance.yahoo.com/rss/headline?s=NVDA");
+    if (!feed.items || feed.items.length === 0) return [];
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const items = data.items || [];
-
-    return items.slice(0, limit).map(item => ({
-      title: item.title || 'No title',
+    return feed.items.slice(0, limit).map((item, index) => ({
+      title: item.title || `Untitled Article ${index + 1}`,
       link: item.link || '',
-      summary: item.summary || '',
-      provider: item.publisher || 'Yahoo Finance'
+      summary: item.contentSnippet || item.content || '',
+      provider: 'Yahoo Finance'
     }));
-  } catch (error) {
-    console.error('Error fetching NVIDIA news from Yahoo Finance:', error.message || error);
-    return []; // Return empty array on error
+  } catch (err) {
+    console.error("Failed to fetch Yahoo RSS:", err.message);
+    return [];
   }
 }
 
