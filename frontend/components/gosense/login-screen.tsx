@@ -2,9 +2,37 @@
 
 import { useState } from "react"
 import { Card, Input, Button } from "./ui-components"
+import { auth } from "../../lib/api"
 
 export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMode: boolean }) => {
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+
+    try {
+      if (activeTab === "signup") {
+        // Sign up
+        await auth.signup(email, password)
+        // After signup, automatically login
+        await auth.login(email, password)
+      } else {
+        // Login
+        await auth.login(email, password)
+      }
+      onLogin()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div
@@ -62,25 +90,39 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
 
         <form
           className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            onLogin()
-          }}
+          onSubmit={handleSubmit}
         >
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
           <div>
             <label className={`block text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1 ml-1`}>
               Email
             </label>
-            <Input placeholder="name@company.com" defaultValue="zengyihan@gmail.com" />
+            <Input
+              type="email"
+              placeholder="name@company.com"
+              value={email}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              required
+            />
           </div>
           <div>
             <label className={`block text-xs font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1 ml-1`}>
               Password
             </label>
-            <Input type="password" placeholder="••••••••" />
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              required
+            />
           </div>
-          <Button className="w-full mt-2" onClick={onLogin}>
-            {activeTab === "login" ? "Login" : "Create Account"}
+          <Button className="w-full mt-2" disabled={loading}>
+            {loading ? "Loading..." : (activeTab === "login" ? "Login" : "Create Account")}
           </Button>
         </form>
       </Card>
