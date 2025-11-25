@@ -47,6 +47,7 @@ async def signup(user: UserCreate, db: Database = Depends(get_database)):
     hashed_password = get_password_hash(user.password)
     user_dict = {
         "email": user.email,
+        "name": user.name,
         "hashed_password": hashed_password,
         "settings": UserSettings().dict()
     }

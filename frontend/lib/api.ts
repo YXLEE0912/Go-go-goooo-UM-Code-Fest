@@ -48,8 +48,8 @@ export const api = {
 }
 
 export const auth = {
-  async signup(email: string, password: string) {
-    return api.post("/auth/signup", { email, password })
+  async signup(email: string, password: string, name?: string) {
+    return api.post("/auth/signup", { email, password, name })
   },
 
   async login(email: string, password: string, twoFactorCode?: string) {

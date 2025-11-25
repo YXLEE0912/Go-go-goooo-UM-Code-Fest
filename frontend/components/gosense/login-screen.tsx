@@ -25,7 +25,7 @@ export const LoginScreen = ({ onLogin, darkMode }: { onLogin: () => void; darkMo
         if (!username || !email || !password) {
           throw new Error("Please fill in all fields")
         }
-        await auth.signup(email, password)
+        await auth.signup(email, password, username)
         // After signup, automatically login
         await auth.login(email, password)
         if (typeof window !== 'undefined') {
