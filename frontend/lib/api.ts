@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://stunning-capybara-694pjw7px445hr66r-8000.app.github.dev"
+const API_BASE_URL = "https://shiny-fortnight-pjp6x9q656962xqp-8000.app.github.dev"
 
 export const api = {
   async request(endpoint: string, options: RequestInit = {}) {

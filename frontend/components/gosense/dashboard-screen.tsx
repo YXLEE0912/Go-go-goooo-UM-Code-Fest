@@ -258,15 +258,29 @@ export const DashboardScreen = ({
               </ResponsiveContainer>
             </div>
 
-            {/* Glassmorphism Predict Button below chart */}
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={() => onNavigate("prediction")}
-                className="px-6 py-2 rounded-2xl text-white font-medium text-sm backdrop-blur-md bg-white/20 hover:bg-white/30 transition duration-300 shadow-lg"
-              >
-                Predict Future Trends
-              </button>
-            </div>
+{/* Futuristic Neon Glass Predict Button below chart */}
+<div className="mt-8 flex justify-center">
+  <button
+    onClick={() => onNavigate("prediction")}
+    className="relative px-12 py-5 rounded-2xl text-white font-bold text-xl backdrop-blur-2xl bg-black/30 hover:bg-black/40 transition-all duration-500 shadow-2xl border border-cyan-400/50 hover:border-cyan-400/70 hover:scale-105 active:scale-95 group overflow-hidden"
+  >
+    {/* Neon glow effect */}
+    <div className="absolute inset-0 rounded-2xl bg-cyan-500/10 blur-xl group-hover:bg-cyan-500/20 transition-all duration-500"></div>
+    
+    {/* Animated border */}
+    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-400 via-purple-500 to-cyan-400 bg-[length:200%_100%] animate-gradient-x opacity-50 group-hover:opacity-70"></div>
+    
+    {/* Inner glass */}
+    <div className="absolute inset-[2px] rounded-2xl bg-gray-900/80 backdrop-blur-xl"></div>
+    
+    {/* Content */}
+    <span className="relative z-10 flex items-center gap-3 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+      <span className="text-2xl"></span>
+      Predict Future Trends
+      <span className="text-2xl"></span>
+    </span>
+  </button>
+</div>
           </Card>
         </div>
       </div>
