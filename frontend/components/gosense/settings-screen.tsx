@@ -24,6 +24,8 @@ import { Card, Input } from "./ui-components"
 import { translate, type Language } from "../../lib/gosense-translations"
 import type { Currency } from "../../lib/gosense-currency"
 import { auth } from "../../lib/api"
+import { NotificationPanel } from "./notification-panel"
+import type { Notification } from "../../lib/gosense-types"
 
 interface SettingsScreenProps {
   onNavigate: (screen: string) => void
@@ -36,6 +38,10 @@ interface SettingsScreenProps {
   setChartType: (type: string) => void
   currency: Currency
   setCurrency: (currency: Currency) => void
+  notifications: Notification[]
+  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>
+  showNotifications: boolean
+  setShowNotifications: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export const SettingsScreen = ({
@@ -49,6 +55,10 @@ export const SettingsScreen = ({
   setChartType,
   currency,
   setCurrency,
+  notifications,
+  setNotifications,
+  showNotifications,
+  setShowNotifications
 }: SettingsScreenProps) => {
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [userName, setUserName] = useState("John Doe")
@@ -263,14 +273,25 @@ export const SettingsScreen = ({
       className={`min-h-screen ${darkMode ? "bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900" : "bg-gradient-to-br from-blue-50 via-white to-indigo-50"} p-6`}
     >
       <div className="max-w-2xl mx-auto">
-        <header className="flex items-center gap-4 mb-8">
-          <button
-            onClick={() => onNavigate("dashboard")}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors"
-          >
-            <ChevronLeft className={`w-5 h-5 ${darkMode ? "text-gray-400" : "text-gray-600"}`} />
-          </button>
-          <h1 className={`text-xl font-bold ${darkMode ? "text-gray-900" : "text-gray-900"}`}>{t("settings")}</h1>
+        <header className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => onNavigate("dashboard")}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors"
+            >
+              <ChevronLeft className={`w-5 h-5 ${darkMode ? "text-gray-400" : "text-gray-600"}`} />
+            </button>
+            <h1 className={`text-xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>{t("settings")}</h1>
+          </div>
+          <NotificationPanel
+            notifications={notifications}
+            showNotifications={showNotifications}
+            setShowNotifications={setShowNotifications}
+            setNotifications={setNotifications}
+            unreadCount={notifications.filter((n) => !n.read).length}
+            darkMode={darkMode}
+            language={language}
+          />
         </header>
 
         <SettingSection title={t("account")}>

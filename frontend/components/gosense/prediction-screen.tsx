@@ -22,7 +22,7 @@ import { ChevronLeft, ArrowUpRight, ArrowDownRight, Bell } from "lucide-react"
 import { Card } from "../ui/card"
 import { Button } from "../ui/button"
 import { ChatModal } from "./chat-modal"
-import { NewsSection } from "./news-section"
+import { NotificationPanel } from "./notification-panel"
 import { generateForecastData } from "../../lib/gosense-data"
 import { auth } from "../../lib/api"
 import { useState, useEffect } from "react"
@@ -36,7 +36,7 @@ interface EnhancedPredictionData {
   isHistorical: boolean
 }
 
-import type { PredictionData } from "../../lib/gosense-types"
+import type { PredictionData, Notification } from "../../lib/gosense-types"
 import { translate, type Language } from "../../lib/gosense-translations"
 import { formatPrice, type Currency } from "../../lib/gosense-currency"
 
@@ -47,6 +47,10 @@ interface PredictionScreenProps {
   language: Language
   chartType: string
   currency: Currency
+  notifications: Notification[]
+  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>
+  showNotifications: boolean
+  setShowNotifications: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export const PredictionScreen = ({
@@ -56,6 +60,10 @@ export const PredictionScreen = ({
   language,
   chartType,
   currency,
+  notifications,
+  setNotifications,
+  showNotifications,
+  setShowNotifications
 }: PredictionScreenProps) => {
   const [forecastData, setForecastData] = useState<any[]>([])
 
@@ -479,25 +487,36 @@ export const PredictionScreen = ({
     <div
       className={`min-h-screen ${darkMode ? "bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900" : "bg-gradient-to-br from-blue-50 via-white to-indigo-50"}`}
     >
-      <div className="h-screen flex flex-col max-w-5xl mx-auto">
+      <div className="flex flex-col max-w-5xl mx-auto min-h-screen">
         <header
-          className={`flex items-center gap-4 px-6 py-4 border-b ${darkMode ? "border-white/10" : "border-gray-200"} backdrop-blur-md`}
+          className={`sticky top-0 z-50 flex items-center justify-between px-6 py-4 border-b ${darkMode ? "border-white/10" : "border-gray-200"} backdrop-blur-md bg-opacity-80 ${darkMode ? "bg-gray-900/80" : "bg-white/80"}`}
         >
-          <button
-            onClick={() => onNavigate("dashboard")}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors"
-          >
-            <ChevronLeft className={`w-5 h-5 ${darkMode ? "text-gray-400" : "text-gray-600"}`} />
-          </button>
-          <div>
-            <h1 className={`text-lg font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
-              {t("predictionAndInsights")}
-            </h1>
-            <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{t("forecast")}</p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => onNavigate("dashboard")}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors"
+            >
+              <ChevronLeft className={`w-5 h-5 ${darkMode ? "text-gray-400" : "text-gray-600"}`} />
+            </button>
+            <div>
+              <h1 className={`text-lg font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                {t("predictionAndInsights")}
+              </h1>
+              <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{t("forecast")}</p>
+            </div>
           </div>
+          <NotificationPanel
+            notifications={notifications}
+            showNotifications={showNotifications}
+            setShowNotifications={setShowNotifications}
+            setNotifications={setNotifications}
+            unreadCount={notifications.filter((n) => !n.read).length}
+            darkMode={darkMode}
+            language={language}
+          />
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 p-6 space-y-6">
           <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
             <Card className={`p-6 ${darkMode ? "bg-gradient-to-br from-white/10 to-white/5" : "bg-white"}`}>
               <div className="flex justify-between items-start mb-6">
@@ -541,8 +560,8 @@ export const PredictionScreen = ({
               </div>
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="lg:col-span-2 p-6">
+            <div className="grid grid-cols-1 gap-6">
+              <Card className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className={`font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
                   {t("priceForecastComparison")}
@@ -560,11 +579,8 @@ export const PredictionScreen = ({
               </div>
             </Card>
             
-            {/* News Section */}
-            <NewsSection darkMode={darkMode} />
-            
             {/* Price Change Table */}
-            <div className="lg:col-span-3">
+            <div>
               <Card className="p-6">
                 <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   7-Day Price Forecast

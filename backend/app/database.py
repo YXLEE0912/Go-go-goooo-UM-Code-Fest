@@ -16,5 +16,12 @@ if not MONGODB_URL:
 client = MongoClient(MONGODB_URL)
 db = client["auth_db"]  # Replace with your database name
 
+try:
+    # Verify connection
+    client.admin.command('ping')
+    print("✅ Successfully connected to MongoDB!")
+except Exception as e:
+    print(f"❌ Error connecting to MongoDB: {e}")
+
 def get_database() -> Database:
     return db
