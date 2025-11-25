@@ -179,8 +179,31 @@ async def predict(request: PredictionRequest):
             forecast_values = inversed[:, 2].tolist()
         else:
             forecast_values = [f * 203 + 50 for f in forecast_values]
-        
-        return PredictionResponse(historical=historical, forecast=forecast_values)
+
+        # === ALERT LOGIC ===
+        alerts = []
+        baseline = historical[-1]  # last historical price
+        for i, val in enumerate(forecast_values, start=1):
+            pct_change = ((val - baseline) / baseline) * 100
+            if pct_change <= -7:
+                signal = "critical alert"
+            elif pct_change <= -5:
+                signal = "normal alert"
+            else:
+                signal = "no alert"
+            alerts.append({
+                "day": i,
+                "price": val,
+                "pct_change": round(pct_change, 2),
+                "signal": signal
+            })
+
+        # Return combined JSON
+        return {
+            "historical": historical,
+            "forecast": forecast_values,
+            "alerts": alerts
+        }
 
     except Exception as e:
         print(f"Prediction error: {e}")

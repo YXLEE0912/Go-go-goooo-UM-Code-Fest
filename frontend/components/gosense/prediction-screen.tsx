@@ -25,7 +25,16 @@ import { ChatModal } from "./chat-modal"
 import { NotificationPanel } from "./notification-panel"
 import { generateForecastData } from "../../lib/gosense-data"
 import { auth } from "../../lib/api"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+
+type AlertSignal = "no alert" | "normal alert" | "critical alert"
+
+interface ForecastAlert {
+  day: number
+  price: number
+  pctChange: number
+  signal: AlertSignal
+}
 
 interface EnhancedPredictionData {
   day: string
@@ -34,6 +43,7 @@ interface EnhancedPredictionData {
   changePercent: number
   displayPrice: number
   isHistorical: boolean
+  alertSignal: AlertSignal
 }
 
 import type { PredictionData, Notification } from "../../lib/gosense-types"
@@ -66,6 +76,19 @@ export const PredictionScreen = ({
   setShowNotifications
 }: PredictionScreenProps) => {
   const [forecastData, setForecastData] = useState<any[]>([])
+  const [alerts, setAlerts] = useState<ForecastAlert[]>([])
+
+  const deriveSignalFromChange = (pct: number): AlertSignal => {
+    if (pct <= -7) return "critical alert"
+    if (pct <= -5) return "normal alert"
+    return "no alert"
+  }
+
+  const alertBadgeStyles: Record<AlertSignal, string> = {
+    "critical alert": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200",
+    "normal alert": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200",
+    "no alert": "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
+  }
 
   useEffect(() => {
     const loadForecast = async () => {
@@ -74,6 +97,12 @@ export const PredictionScreen = ({
         const response = await auth.predict(days)
         
         if (response.forecast && response.forecast.length > 0) {
+           const alertsFromApi: ForecastAlert[] = (response.alerts ?? []).map((alert: any, idx: number) => ({
+             day: alert?.day ?? idx + 1,
+             price: typeof alert?.price === "number" ? alert.price : response.forecast[idx] ?? 0,
+             pctChange: typeof alert?.pct_change === "number" ? alert.pct_change : alert?.pctChange ?? 0,
+             signal: (alert?.signal ?? "no alert") as AlertSignal
+           }))
            // Generate labels for the next 7 days
            const labels: string[] = []
            const today = new Date();
@@ -86,20 +115,48 @@ export const PredictionScreen = ({
            const forecastData = response.forecast.map((price: number, i: number) => ({
              day: labels[i] || `Day ${i+1}`,
              historical: null,
-             forecast: Number(price.toFixed(2))
+             forecast: Number(price.toFixed(2)),
+             alert: alertsFromApi[i]
            }))
            
+           setAlerts(alertsFromApi)
            setForecastData(forecastData)
         } else {
            // Fallback to generated data if API fails
            const generated = generateForecastData([], 'Week').filter(d => d.forecast !== null)
-           setForecastData(generated)
+           const generatedWithAlerts = generated.map((item, idx, array) => {
+             const prevValue = idx === 0 ? item.historical ?? item.forecast ?? 0 : array[idx - 1].forecast ?? array[idx - 1].historical ?? 0
+             const currentValue = item.forecast ?? item.historical ?? 0
+             const pctChange = prevValue !== 0 ? ((currentValue - prevValue) / prevValue) * 100 : 0
+             const alert: ForecastAlert = {
+               day: idx + 1,
+               price: currentValue,
+               pctChange: Number(pctChange.toFixed(2)),
+               signal: deriveSignalFromChange(pctChange)
+             }
+             return { ...item, alert }
+           })
+           setAlerts(generatedWithAlerts.map(item => item.alert))
+           setForecastData(generatedWithAlerts)
         }
       } catch (e) {
         console.error("Prediction error:", e)
         // Fallback to generated forecast data
         const generated = generateForecastData([], 'Week').filter(d => d.forecast !== null)
-        setForecastData(generated)
+        const generatedWithAlerts = generated.map((item, idx, array) => {
+          const prevValue = idx === 0 ? item.historical ?? item.forecast ?? 0 : array[idx - 1].forecast ?? array[idx - 1].historical ?? 0
+          const currentValue = item.forecast ?? item.historical ?? 0
+          const pctChange = prevValue !== 0 ? ((currentValue - prevValue) / prevValue) * 100 : 0
+          const alert: ForecastAlert = {
+            day: idx + 1,
+            price: currentValue,
+            pctChange: Number(pctChange.toFixed(2)),
+            signal: deriveSignalFromChange(pctChange)
+          }
+          return { ...item, alert }
+        })
+        setAlerts(generatedWithAlerts.map(item => item.alert))
+        setForecastData(generatedWithAlerts)
       }
     }
     
@@ -113,37 +170,80 @@ export const PredictionScreen = ({
   const predictedPercent = firstForecastPrice !== 0 ? ((predictedChange / firstForecastPrice) * 100).toFixed(2) : "0.00"
 
   // Calculate percentage changes for each data point with proper null checks
-  const enhancedData: EnhancedPredictionData[] = forecastData.map((item, index, array) => {
-    // Safely get current value with fallback
+  const enhancedData: EnhancedPredictionData[] = forecastData.map((item: any, index, array) => {
     const currentValue = item.historical ?? item.forecast ?? 0
-    
-    // For the first item, return with 0% change
+    const alertInfo: ForecastAlert | undefined = item.alert ?? alerts[index]
+
     if (index === 0) {
+      const basePercent = alertInfo?.pctChange ?? 0
+      const normalizedPercent = Number(Number.isFinite(basePercent) ? basePercent.toFixed(2) : 0)
+      const percentValue = Number.isFinite(normalizedPercent) ? normalizedPercent : 0
+      const signal = alertInfo?.signal ?? deriveSignalFromChange(percentValue)
+
       return {
         ...item,
-        changePercent: 0,
+        changePercent: percentValue,
         displayPrice: currentValue,
-        isHistorical: item.historical !== null
+        isHistorical: item.historical !== null,
+        alertSignal: signal
       }
     }
-    
-    // For subsequent items, calculate percentage change
+
     const prevItem = array[index - 1]
     const prevValue = prevItem.historical ?? prevItem.forecast ?? 0
-    
-    // Calculate percentage change, handle division by zero
-    let changePercent = 0
-    if (prevValue !== 0) {
-      changePercent = ((currentValue - prevValue) / prevValue) * 100
+
+    let changePercent = alertInfo?.pctChange
+    if (changePercent === undefined) {
+      if (prevValue !== 0) {
+        changePercent = ((currentValue - prevValue) / prevValue) * 100
+      } else {
+        changePercent = 0
+      }
     }
-    
-    return { 
-      ...item, 
-      changePercent: Number(changePercent.toFixed(2)),
+
+    const normalizedPercent = Number(changePercent.toFixed(2))
+    const signal = alertInfo?.signal ?? deriveSignalFromChange(normalizedPercent)
+
+    return {
+      ...item,
+      changePercent: normalizedPercent,
       displayPrice: currentValue,
-      isHistorical: item.historical !== null
+      isHistorical: item.historical !== null,
+      alertSignal: signal
     }
   })
+
+  const overallSignal: AlertSignal = useMemo(() => {
+    if (alerts.some(alert => alert.signal === "critical alert")) {
+      return "critical alert"
+    }
+    if (alerts.some(alert => alert.signal === "normal alert")) {
+      return "normal alert"
+    }
+    if (alerts.length > 0) {
+      return "no alert"
+    }
+
+    if (enhancedData.some(item => item.alertSignal === "critical alert")) {
+      return "critical alert"
+    }
+    if (enhancedData.some(item => item.alertSignal === "normal alert")) {
+      return "normal alert"
+    }
+    return "no alert"
+  }, [alerts, enhancedData])
+
+  const formatRowSignalLabel = (signal: AlertSignal) => {
+    if (signal === "critical alert") return "Critical Alert"
+    if (signal === "normal alert") return "Normal Alert"
+    return "No Alert"
+  }
+
+  const formatSectionSignalLabel = (signal: AlertSignal) => {
+    if (signal === "critical alert") return "Critical Alert"
+    if (signal === "normal alert") return "Normal Alert"
+    return "Stable"
+  }
 
   const t = (key: string) => translate(language, key)
 
@@ -582,9 +682,18 @@ export const PredictionScreen = ({
             {/* Price Change Table */}
             <div>
               <Card className="p-6">
-                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  7-Day Price Forecast
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      7-Day Price Forecast
+                    </h3>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${alertBadgeStyles[overallSignal]}`}
+                    >
+                      {formatSectionSignalLabel(overallSignal)}
+                    </span>
+                  </div>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
@@ -620,15 +729,24 @@ export const PredictionScreen = ({
                               )}
                             </td>
                             <td className="py-3 text-sm text-right">
-                              {index > 0 && (
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                  isPositive 
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
-                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                                }`}>
-                                  {isPositive ? '+' : ''}{change.toFixed(2)}%
+                              <div className="flex items-center justify-end gap-2">
+                                {index > 0 ? (
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                    isPositive 
+                                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
+                                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                  }`}>
+                                    {isPositive ? '+' : ''}{change.toFixed(2)}%
+                                  </span>
+                                ) : (
+                                  <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>—</span>
+                                )}
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${alertBadgeStyles[item.alertSignal]}`}
+                                >
+                                  {formatRowSignalLabel(item.alertSignal)}
                                 </span>
-                              )}
+                              </div>
                             </td>
                           </tr>
                         )
