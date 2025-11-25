@@ -3,6 +3,33 @@ import httpx
 import feedparser
 from typing import List, Dict
 import time
+from textblob import TextBlob
+
+def analyze_sentiment(text: str) -> Dict:
+    blob = TextBlob(text)
+    polarity = blob.sentiment.polarity
+    
+    if polarity > 0.1:
+        sentiment = "positive"
+    elif polarity < -0.1:
+        sentiment = "negative"
+    else:
+        sentiment = "neutral"
+        
+    # Determine impact based on sentiment magnitude
+    # Strong sentiment (positive or negative) implies high impact
+    if abs(polarity) > 0.5:
+        impact = "high"
+    elif abs(polarity) > 0.1:
+        impact = "medium"
+    else:
+        impact = "low"
+        
+    return {
+        "score": polarity,
+        "label": sentiment,
+        "impact": impact
+    }
 
 async def get_yahoo_news(limit: int = 3) -> List[Dict]:
     try:
@@ -24,11 +51,20 @@ async def get_yahoo_news(limit: int = 3) -> List[Dict]:
         
         news = []
         for entry in feed.entries[:limit]:
+            title = entry.get("title", "No title")
+            summary = entry.get("summary", "") or entry.get("description", "")
+            
+            # Analyze sentiment of title + summary
+            sentiment_data = analyze_sentiment(f"{title} {summary}")
+            
             news.append({
-                "title": entry.get("title", "No title"),
+                "title": title,
                 "link": entry.get("link", ""),
-                "summary": entry.get("summary", "") or entry.get("description", ""),
-                "provider": "Yahoo Finance"
+                "summary": summary,
+                "provider": "Yahoo Finance",
+                "sentiment": sentiment_data["label"],
+                "sentiment_score": sentiment_data["score"],
+                "impact": sentiment_data["impact"]
             })
         print(f"Fetched {len(news)} articles from Yahoo.")
         return news
@@ -50,11 +86,20 @@ async def get_google_news(limit: int = 3) -> List[Dict]:
         
         news = []
         for entry in feed.entries[:limit]:
+            title = entry.get("title", "No title")
+            summary = entry.get("summary", "")
+            
+            # Analyze sentiment of title + summary
+            sentiment_data = analyze_sentiment(f"{title} {summary}")
+            
             news.append({
-                "title": entry.get("title", "No title"),
+                "title": title,
                 "link": entry.get("link", ""),
-                "summary": entry.get("summary", ""),
-                "provider": entry.get("source", {}).get("title", "Google News")
+                "summary": summary,
+                "provider": entry.get("source", {}).get("title", "Google News"),
+                "sentiment": sentiment_data["label"],
+                "sentiment_score": sentiment_data["score"],
+                "impact": sentiment_data["impact"]
             })
         return news
     except Exception as e:

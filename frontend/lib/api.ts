@@ -118,6 +118,10 @@ export const auth = {
     return api.get(`/api/history?days=${days}&period=${period}&month_index=${monthIndex}&year=${year}`)
   },
 
+  async getNews() {
+    return api.get("/api/news")
+  },
+
   logout() {
     localStorage.removeItem("token")
   },

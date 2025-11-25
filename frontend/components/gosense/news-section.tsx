@@ -6,6 +6,7 @@ import { Card } from "../ui/card"
 import { ArrowUpRight, Bell, BellRing, X } from "lucide-react"
 import { useState, useEffect } from "react"
 import { playNotificationSound } from "../../lib/gosense-data"
+import { auth } from "../../lib/api"
 
 export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
   interface NewsItem {
@@ -15,6 +16,8 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
     time: string
     impact: 'high' | 'medium' | 'low'
     isNew?: boolean
+    link?: string
+    sentiment?: 'positive' | 'negative' | 'neutral'
   }
 
   const [news, setNews] = useState<NewsItem[]>([])
@@ -23,6 +26,7 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
   const [currentAlert, setCurrentAlert] = useState<NewsItem | null>(null)
   const [notificationQueue, setNotificationQueue] = useState<NewsItem[]>([])
   const [isProcessingQueue, setIsProcessingQueue] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   // Function to show notification
   const showNewsNotification = (newsItem: NewsItem) => {
@@ -49,91 +53,56 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
     return () => clearTimeout(timer)
   }
 
-  // Simulate real-time news updates
+  // Fetch news from backend
   useEffect(() => {
-    // Initial news load
-    const initialNews: NewsItem[] = [
-      {
-        id: '1',
-        title: 'NVIDIA announces new AI chip with 2x performance',
-        source: 'Tech News',
-        time: '2h ago',
-        impact: 'high' as const,
-        isNew: false
-      },
-      {
-        id: '2',
-        title: 'AI industry growth exceeds expectations',
-        source: 'Financial Times',
-        time: '5h ago',
-        impact: 'medium' as const,
-        isNew: false
-      },
-      {
-        id: '3',
-        title: 'New data center partnership announced',
-        source: 'Data Center Weekly',
-        time: '1d ago',
-        impact: 'low' as const,
-        isNew: false
-      }
-    ]
-    setNews(initialNews)
-
-    // Simulate real-time news updates
-    const newsIntervals = [
-      {
-        time: 30000, // 30 seconds
-        news: {
-          id: '4',
-          title: 'Breaking: NVIDIA stock surges 5% on strong earnings report',
-          source: 'Market Watch',
-          time: 'Just now',
-          impact: 'high' as const,
-          isNew: true
-        }
-      },
-      {
-        time: 90000, // 1.5 minutes
-        news: {
-          id: '5',
-          title: 'New AI regulations could impact tech sector growth',
-          source: 'Wall Street Journal',
-          time: 'Just now',
-          impact: 'medium' as const,
-          isNew: true
-        }
-      },
-      {
-        time: 150000, // 2.5 minutes
-        news: {
-          id: '6',
-          title: 'Tech stocks rally as market opens higher',
-          source: 'Bloomberg',
-          time: 'Just now',
-          impact: 'low' as const,
-          isNew: true
-        }
-      }
-    ]
-
-    const timers = newsIntervals.map(item => {
-      return setTimeout(() => {
-        const newNewsItem = { ...item.news, time: 'Just now', isNew: true }
+    const fetchNews = async () => {
+      try {
+        setLoading(true)
+        const data = await auth.getNews()
         
-        setNews(prevNews => [
-          newNewsItem,
-          ...prevNews.filter(n => n.id !== item.news.id)
-        ])
+        // Map backend data to NewsItem format
+        const formattedNews: NewsItem[] = data.map((item: any, index: number) => ({
+          id: `news-${index}-${Date.now()}`,
+          title: item.title,
+          source: item.provider,
+          time: 'Today', // Backend doesn't return time yet
+          impact: item.impact || (index % 3 === 0 ? 'high' : index % 3 === 1 ? 'medium' : 'low'),
+          isNew: index < 2, // Mark first 2 as new
+          link: item.link,
+          sentiment: item.sentiment
+        }))
         
-        // Show notification for all new news items
-        showNewsNotification(newNewsItem)
-      }, item.time)
-    })
-
-    return () => {
-      timers.forEach(timer => clearTimeout(timer))
+        setNews(formattedNews)
+        
+        // Show notification for the first high impact news
+        const highImpactNews = formattedNews.find(n => n.impact === 'high')
+        if (highImpactNews) {
+          setTimeout(() => showNewsNotification(highImpactNews), 1000)
+        }
+      } catch (error) {
+        console.error("Failed to fetch news:", error)
+        // Fallback to mock data if fetch fails
+        const fallbackNews: NewsItem[] = [
+          {
+            id: '1',
+            title: 'Failed to load live news. Showing cached data.',
+            source: 'System',
+            time: 'Now',
+            impact: 'medium',
+            isNew: true
+          }
+        ]
+        setNews(fallbackNews)
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchNews()
+    
+    // Refresh news every 5 minutes
+    const interval = setInterval(fetchNews, 5 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [])
 
   const impactColors = {
@@ -242,10 +211,16 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
         </div>
       
         <div className="space-y-4">
-          {news.map((item) => (
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Fetching latest news...</p>
+            </div>
+          ) : news.map((item) => (
             <div 
               key={item.id} 
               className={`p-4 rounded-lg border ${darkMode ? 'border-white/10 hover:bg-white/5' : 'border-gray-200 hover:bg-gray-50'} transition-colors cursor-pointer`}
+              onClick={() => item.link && window.open(item.link, '_blank')}
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -260,6 +235,17 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${darkMode ? impactColors[item.impact].replace('text-', 'text-').replace('bg-', 'bg-opacity-20 ') : impactColors[item.impact]}`}>
                         {item.impact.charAt(0).toUpperCase() + item.impact.slice(1)} Impact
                       </span>
+                      {item.sentiment && (
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          item.sentiment === 'positive' 
+                            ? darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-800'
+                            : item.sentiment === 'negative'
+                            ? darkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-800'
+                            : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1)}
+                        </span>
+                      )}
                     </div>
                     <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       {item.time} • {item.source}
