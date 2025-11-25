@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
@@ -50,14 +50,11 @@ export function ReportGenerator({
         includeCharts,
         includeChats,
         includePredictions,
-        chartData: includeCharts ? chartData : null,
-        predictionData: includePredictions ? predictionData : null,
+        chartData: includeCharts ? chartData : [],
+        predictionData: includePredictions ? predictionData : [],
         chatHistory: includeChats ? chatHistory : [],
         stockChanges: stockChanges || [],
-        generatedAt: new Date().toISOString(),
       };
-
-      console.log('Sending report data:', reportData);
 
       const response = await fetch('/api/generate-report', {
         method: 'POST',
@@ -66,27 +63,22 @@ export function ReportGenerator({
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = 'Failed to generate report';
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.detail || errorMessage;
-        } catch {
-          errorMessage = `Server error: ${response.status}`;
-        }
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate report');
       }
 
       const blob = await response.blob();
       if (blob.size === 0) throw new Error('Generated report is empty');
 
+      // Determine filename dynamically based on selected format
       const contentDisposition = response.headers.get('content-disposition');
-      let filename = `report-${new Date().toISOString().split('T')[0]}.${selectedFormat}`;
+      let filename = `report.${selectedFormat}`;
       if (contentDisposition) {
-        const match = contentDisposition.match(/filename="(.+)"/);
+        const match = contentDisposition.match(/filename="?(.+)"?/);
         if (match) filename = match[1];
       }
 
+      // Trigger download
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -97,11 +89,9 @@ export function ReportGenerator({
       a.remove();
 
       setOpen(false);
-
-    } catch (error) {
-      console.error('Error generating report:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate report. Please try again.';
-      setError(errorMessage);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate report';
+      setError(message);
     } finally {
       setIsGenerating(false);
     }
@@ -109,10 +99,7 @@ export function ReportGenerator({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent
-        className="max-w-2xl p-6 rounded-2xl bg-white/20 backdrop-blur-lg border border-white/30 shadow-lg"
-        style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(15px)" }}
-      >
+      <DialogContent className="max-w-2xl p-6 rounded-2xl bg-white/20 backdrop-blur-lg border border-white/30 shadow-lg">
         <DialogHeader>
           <DialogTitle className="text-white">Generate Custom Report</DialogTitle>
         </DialogHeader>

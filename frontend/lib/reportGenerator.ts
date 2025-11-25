@@ -1,18 +1,17 @@
-// frontend/lib/reportGenerator.ts
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import * as docx from 'docx';
-import * as PptxGenJS from 'pptxgenjs';
+import { Document, Paragraph, TextRun, HeadingLevel, Packer } from 'docx';
+import PptxGenJS from 'pptxgenjs';
 
-interface ReportData {
+export interface ReportData {
   format: 'pdf' | 'excel' | 'word' | 'ppt';
   period: 'daily' | 'weekly' | 'monthly';
   includeCharts: boolean;
   includeChats: boolean;
   includePredictions: boolean;
-  chartData: any;
-  predictionData: any;
+  chartData: any[];
+  predictionData: any[];
   chatHistory: Array<{ question: string; answer: string }>;
   stockChanges: Array<{ date: string; change: number }>;
   generatedAt: string;
@@ -21,206 +20,213 @@ interface ReportData {
 export async function createReport(reportData: ReportData): Promise<Buffer> {
   switch (reportData.format) {
     case 'pdf':
-      return await generatePdfReport(reportData);
+      return generatePdfReport(reportData);
     case 'excel':
-      return await generateExcelReport(reportData);
+      return generateExcelReport(reportData);
     case 'word':
-      return await generateWordReport(reportData);
+      return generateWordReport(reportData);
     case 'ppt':
-      return await generatePptReport(reportData);
+      return generatePptReport(reportData);
     default:
       throw new Error(`Unsupported report format: ${reportData.format}`);
   }
 }
 
-async function generatePdfReport(reportData: ReportData): Promise<Buffer> {
+// ================= PDF REPORT =================
+async function generatePdfReport(data: ReportData): Promise<Buffer> {
   const doc = new jsPDF();
-  
-  // Add title
+
+  // Title
   doc.setFontSize(20);
   doc.text('Investment Performance Report', 14, 22);
-  
-  // Add report metadata
+
+  // Metadata
   doc.setFontSize(12);
-  doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
-  doc.text(`Period: ${reportData.period}`, 14, 40);
-  
-  // Add charts section if enabled
-  if (reportData.includeCharts && reportData.chartData) {
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 32);
+  doc.text(`Period: ${data.period}`, 14, 40);
+
+  // Historical Charts
+  if (data.includeCharts && data.chartData.length > 0) {
     doc.addPage();
     doc.setFontSize(16);
     doc.text('Historical Performance', 14, 22);
-    
-    // Here you would add the actual chart image
-    // For now, we'll add a placeholder
     doc.setFontSize(12);
-    doc.text('Historical chart would be displayed here', 14, 40);
+    doc.text('Charts would be displayed here', 14, 32);
   }
-  
-  // Add predictions section if enabled
-  if (reportData.includePredictions && reportData.predictionData) {
+
+  // AI Predictions / Stock Changes
+  if (data.includePredictions && data.predictionData.length > 0) {
     doc.addPage();
     doc.setFontSize(16);
     doc.text('AI Predictions', 14, 22);
-    
-    // Add prediction data as a table
-    const tableData = reportData.stockChanges.map(item => [
+
+    const tableData = data.stockChanges.map((item) => [
       item.date,
-      `${item.change > 0 ? '+' : ''}${item.change.toFixed(2)}%`
+      item.change > 0 ? `+${item.change.toFixed(2)}%` : `${item.change.toFixed(2)}%`,
     ]);
-    
+
     (doc as any).autoTable({
       head: [['Date', 'Price Change']],
       body: tableData,
       startY: 30,
       theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] }
+      headStyles: { fillColor: [41, 128, 185] },
     });
   }
-  
-  // Add chat history if enabled
-  if (reportData.includeChats && reportData.chatHistory.length > 0) {
+
+  // Chat History
+  if (data.includeChats && data.chatHistory.length > 0) {
     doc.addPage();
     doc.setFontSize(16);
     doc.text('Chat History', 14, 22);
-    
+
     let yPos = 40;
-    reportData.chatHistory.forEach((chat, index) => {
+    data.chatHistory.forEach((chat, index) => {
       if (yPos > 260) {
         doc.addPage();
         yPos = 20;
       }
-      
       doc.setFont('helvetica', 'bold');
       doc.text(`Q${index + 1}: ${chat.question}`, 14, yPos);
       yPos += 10;
-      
+
       doc.setFont('helvetica', 'normal');
       const answerLines = doc.splitTextToSize(chat.answer, 180);
       doc.text(answerLines, 20, yPos);
       yPos += answerLines.length * 7 + 10;
     });
   }
-  
+
   return Buffer.from(doc.output('arraybuffer'));
 }
 
-async function generateExcelReport(reportData: ReportData): Promise<Buffer> {
+// ================= EXCEL REPORT =================
+async function generateExcelReport(data: ReportData): Promise<Buffer> {
   const wb = XLSX.utils.book_new();
-  
-  // Create summary sheet
+
+  // Summary Sheet
   const summaryData = [
     ['Report Information', ''],
     ['Generated On', new Date().toLocaleString()],
-    ['Report Period', reportData.period],
+    ['Report Period', data.period],
     ['', ''],
     ['Sections Included', ''],
-    ['Historical Charts', reportData.includeCharts ? 'Yes' : 'No'],
-    ['AI Predictions', reportData.includePredictions ? 'Yes' : 'No'],
-    ['Chat History', reportData.includeChats ? 'Yes' : 'No']
+    ['Historical Charts', data.includeCharts ? 'Yes' : 'No'],
+    ['AI Predictions', data.includePredictions ? 'Yes' : 'No'],
+    ['Chat History', data.includeChats ? 'Yes' : 'No'],
   ];
-  
-  XLSX.utils.book_append_sheet(
-    wb,
-    XLSX.utils.aoa_to_sheet(summaryData),
-    'Summary'
-  );
-  
-  // Add stock changes sheet
-  if (reportData.stockChanges.length > 0) {
-    const stockData = [
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), 'Summary');
+
+  // Stock Changes
+  if (data.stockChanges.length > 0) {
+    const stockSheet = [
       ['Date', 'Price Change (%)'],
-      ...reportData.stockChanges.map(item => [
-        item.date,
-        { t: 'n', v: item.change, z: '0.00%' }
-      ])
+      ...data.stockChanges.map((item) => [item.date, item.change]),
     ];
-    
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(stockData),
-      'Stock Changes'
-    );
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(stockSheet), 'Stock Changes');
   }
-  
-  // Add chat history sheet if enabled
-  if (reportData.includeChats && reportData.chatHistory.length > 0) {
-    const chatData = [
+
+  // Chat History
+  if (data.includeChats && data.chatHistory.length > 0) {
+    const chatSheet = [
       ['#', 'Question', 'Answer'],
-      ...reportData.chatHistory.map((chat, index) => [
-        index + 1,
-        chat.question,
-        chat.answer
-      ])
+      ...data.chatHistory.map((chat, index) => [index + 1, chat.question, chat.answer]),
     ];
-    
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(chatData),
-      'Chat History'
-    );
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(chatSheet), 'Chat History');
   }
-  
+
   return XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
 }
 
-async function generateWordReport(reportData: ReportData): Promise<Buffer> {
-  const { Document, Paragraph, TextRun, HeadingLevel, Packer } = docx;
-  
+// ================= WORD REPORT =================
+async function generateWordReport(data: ReportData): Promise<Buffer> {
   const doc = new Document({
-    sections: [{
-      properties: {},
-      children: [
-        new Paragraph({
-          text: "Investment Performance Report",
-          heading: HeadingLevel.HEADING_1,
-          spacing: { after: 200 }
-        }),
-        new Paragraph({
-          text: `Generated on: ${new Date().toLocaleString()}`,
-          spacing: { after: 100 }
-        }),
-        new Paragraph({
-          text: `Period: ${reportData.period}`,
-          spacing: { after: 200 }
-        }),
-        
-        // Add more sections based on reportData
-        // This is a simplified version - you'd want to add more sections
-        // for charts, predictions, and chat history similar to the PDF version
-      ]
-    }]
+    sections: [
+      {
+        children: [
+          new Paragraph({
+            text: 'Investment Performance Report',
+            heading: HeadingLevel.HEADING_1,
+            spacing: { after: 200 },
+          }),
+          new Paragraph({ text: `Generated on: ${new Date().toLocaleString()}`, spacing: { after: 100 } }),
+          new Paragraph({ text: `Period: ${data.period}`, spacing: { after: 200 } }),
+        ],
+      },
+    ],
   });
-  
+
+  // Add Sections
+  if (data.includeCharts && data.chartData.length > 0) {
+    doc.addSection({
+      children: [
+        new Paragraph({ text: 'Historical Charts', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'Charts would be displayed here.' }),
+      ],
+    });
+  }
+
+  if (data.includePredictions && data.predictionData.length > 0) {
+    doc.addSection({
+      children: [
+        new Paragraph({ text: 'AI Predictions / Stock Changes', heading: HeadingLevel.HEADING_2 }),
+        ...data.stockChanges.map((item, index) =>
+          new Paragraph({ text: `${index + 1}. ${item.date}: ${item.change > 0 ? '+' : ''}${item.change}%` })
+        ),
+      ],
+    });
+  }
+
+  if (data.includeChats && data.chatHistory.length > 0) {
+    doc.addSection({
+      children: [
+        new Paragraph({ text: 'Chat History', heading: HeadingLevel.HEADING_2 }),
+        ...data.chatHistory.map((chat, index) =>
+          new Paragraph({ text: `Q${index + 1}: ${chat.question}\nA: ${chat.answer}` })
+        ),
+      ],
+    });
+  }
+
   const buffer = await Packer.toBuffer(doc);
   return Buffer.from(buffer);
 }
 
-async function generatePptReport(reportData: ReportData): Promise<Buffer> {
-  const pptx = new PptxGenJS.default();
-  const slide = pptx.addSlide();
-  
-  // Title slide
-  slide.addText('Investment Performance Report', {
-    x: 1,
-    y: 1,
-    w: 8,
-    h: 1,
-    fontSize: 24,
-    bold: true
-  });
-  
-  slide.addText(`Generated on: ${new Date().toLocaleString()}\nPeriod: ${reportData.period}`, {
-    x: 1,
-    y: 2,
-    w: 8,
-    h: 1,
-    fontSize: 14
-  });
-  
-  // Add more slides based on reportData
-  // This is a simplified version - you'd want to add more slides
-  // for charts, predictions, and chat history
-  
-  return pptx.stream() as unknown as Buffer;
+// ================= PPT REPORT =================
+async function generatePptReport(data: ReportData): Promise<Buffer> {
+  const pptx = new PptxGenJS();
+
+  // Title Slide
+  const slide1 = pptx.addSlide();
+  slide1.addText('Investment Performance Report', { x: 1, y: 1, w: 8, h: 1, fontSize: 24, bold: true });
+  slide1.addText(`Generated: ${new Date().toLocaleString()}\nPeriod: ${data.period}`, { x: 1, y: 2, w: 8, h: 1, fontSize: 14 });
+
+  // Charts Slide
+  if (data.includeCharts && data.chartData.length > 0) {
+    const slide = pptx.addSlide();
+    slide.addText('Historical Charts', { x: 1, y: 1, fontSize: 18, bold: true });
+    slide.addText('Charts would be displayed here.', { x: 1, y: 1.5, fontSize: 12 });
+  }
+
+  // Predictions Slide
+  if (data.includePredictions && data.predictionData.length > 0) {
+    const slide = pptx.addSlide();
+    slide.addText('AI Predictions / Stock Changes', { x: 1, y: 1, fontSize: 18, bold: true });
+    data.stockChanges.forEach((item, index) => {
+      slide.addText(`${index + 1}. ${item.date}: ${item.change > 0 ? '+' : ''}${item.change}%`, { x: 1, y: 1.5 + index * 0.3, fontSize: 12 });
+    });
+  }
+
+  // Chat Slide
+  if (data.includeChats && data.chatHistory.length > 0) {
+    const slide = pptx.addSlide();
+    slide.addText('Chat History', { x: 1, y: 1, fontSize: 18, bold: true });
+    data.chatHistory.forEach((chat, index) => {
+      slide.addText(`Q${index + 1}: ${chat.question}`, { x: 1, y: 1.5 + index * 0.5, fontSize: 12, bold: true });
+      slide.addText(`A: ${chat.answer}`, { x: 1.2, y: 1.7 + index * 0.5, fontSize: 12 });
+    });
+  }
+
+  const buffer = await pptx.stream();
+  return buffer as unknown as Buffer;
 }
