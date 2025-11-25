@@ -34,6 +34,25 @@ export const translations: Record<Language, Record<string, string>> = {
     historicalData: "Historical Data",
     aiForecast: "AI Forecast",
 
+    // News Screen
+    marketNews: "Market News",
+    marketNewsSubtitle: "Latest updates and market insights",
+    marketNewsAndAlerts: "Market News & Alerts",
+    fetchingNews: "Fetching latest news...",
+    priceAlertsTitle: "Price Alerts",
+    priceAlertsSubtitle: "Get notified about significant price movements",
+    setAlert: "Set Alert",
+    breakingNews: "Breaking News",
+    update: "Update",
+    news: "News",
+    impact: "Impact",
+    high: "High",
+    medium: "Medium",
+    low: "Low",
+    positive: "Positive",
+    negative: "Negative",
+    neutral: "Neutral",
+
     // Settings
     settings: "Settings",
     account: "Account",
@@ -104,6 +123,25 @@ export const translations: Record<Language, Record<string, string>> = {
     historicalData: "历史数据",
     aiForecast: "AI预测",
 
+    // News Screen
+    marketNews: "市场新闻",
+    marketNewsSubtitle: "最新更新和市场洞察",
+    marketNewsAndAlerts: "市场新闻与警报",
+    fetchingNews: "正在获取最新新闻...",
+    priceAlertsTitle: "价格警报",
+    priceAlertsSubtitle: "获取重大价格变动通知",
+    setAlert: "设置警报",
+    breakingNews: "突发新闻",
+    update: "更新",
+    news: "新闻",
+    impact: "影响",
+    high: "高",
+    medium: "中",
+    low: "低",
+    positive: "正面",
+    negative: "负面",
+    neutral: "中性",
+
     // Settings
     settings: "设置",
     account: "账户",
@@ -173,6 +211,25 @@ export const translations: Record<Language, Record<string, string>> = {
     historicalVsForecast: "Sejarah vs Ramalan AI",
     historicalData: "Data Sejarah",
     aiForecast: "Ramalan AI",
+
+    // News Screen
+    marketNews: "Berita Pasaran",
+    marketNewsSubtitle: "Kemas kini terkini dan wawasan pasaran",
+    marketNewsAndAlerts: "Berita Pasaran & Amaran",
+    fetchingNews: "Sedang mendapatkan berita terkini...",
+    priceAlertsTitle: "Amaran Harga",
+    priceAlertsSubtitle: "Dapatkan pemberitahuan mengenai pergerakan harga yang ketara",
+    setAlert: "Tetapkan Amaran",
+    breakingNews: "Berita Tergempar",
+    update: "Kemas Kini",
+    news: "Berita",
+    impact: "Impak",
+    high: "Tinggi",
+    medium: "Sederhana",
+    low: "Rendah",
+    positive: "Positif",
+    negative: "Negatif",
+    neutral: "Neutral",
 
     // Settings
     settings: "Tetapan",

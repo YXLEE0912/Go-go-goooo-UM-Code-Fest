@@ -61,6 +61,7 @@ export default function GoSenseApp() {
                 darkMode={darkMode}
                 language={language}
                 chartType={chartType}
+                setChartType={setChartType}
                 currency={currency}
                 notifications={notifications}
                 setNotifications={setNotifications}

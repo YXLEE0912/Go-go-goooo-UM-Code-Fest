@@ -405,15 +405,6 @@ export const SettingsScreen = ({
                 <option value="Candlestick" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("candlestickChart")}
                 </option>
-                <option value="Scatter" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
-                  {t("scatterChart")}
-                </option>
-                <option value="Pie" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
-                  {t("pieChart")}
-                </option>
-                <option value="Radar" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
-                  {t("radarChart")}
-                </option>
                 <option value="Composed" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   {t("composedChart")}
                 </option>
@@ -461,8 +452,8 @@ export const SettingsScreen = ({
                 <option value="Chinese" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
                   中文
                 </option>
-                <option value="Spanish" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
-                  Español
+                <option value="Malay" className={darkMode ? "bg-white text-gray-900" : "bg-white text-gray-900"}>
+                  Bahasa Melayu
                 </option>
               </select>
             }

@@ -39,10 +39,10 @@ export const NewsScreen = ({
         >
           <div>
             <h1 className={`text-lg font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
-              Market News
+              {t("marketNews")}
             </h1>
             <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-              Latest updates and market insights
+              {t("marketNewsSubtitle")}
             </p>
           </div>
           <NotificationPanel
@@ -62,7 +62,7 @@ export const NewsScreen = ({
             animate={{ opacity: 1, scale: 1 }}
             className="space-y-4"
           >
-            <NewsSection darkMode={darkMode} />
+            <NewsSection darkMode={darkMode} language={language} />
           </motion.div>
         </div>
       </div>

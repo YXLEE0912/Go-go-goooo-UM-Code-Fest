@@ -7,8 +7,11 @@ import { ArrowUpRight, Bell, BellRing, X } from "lucide-react"
 import { useState, useEffect } from "react"
 import { playNotificationSound } from "../../lib/gosense-data"
 import { auth } from "../../lib/api"
+import { translate, type Language } from "../../lib/gosense-translations"
 
-export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
+export const NewsSection = ({ darkMode, language }: { darkMode: boolean, language: Language }) => {
+  const t = (key: string) => translate(language, key)
+
   interface NewsItem {
     id: string
     title: string
@@ -163,10 +166,10 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
                     }`}
                   >
                     {currentAlert.impact === 'high' 
-                      ? 'Breaking News' 
+                      ? t("breakingNews") 
                       : currentAlert.impact === 'medium' 
-                        ? 'Update' 
-                        : 'News'}
+                        ? t("update") 
+                        : t("news")}
                   </span>
                   <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     {currentAlert.time} • {currentAlert.source}
@@ -192,7 +195,7 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
             <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Market News & Alerts
+              {t("marketNewsAndAlerts")}
             </h3>
             {news.some(item => item.isNew) && (
               <span className="flex h-2 w-2">
@@ -206,7 +209,7 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
             onClick={markAllAsRead}
           >
             <BellRing className="h-4 w-4" />
-            <span>Mark all as read</span>
+            <span>{t("markAllRead")}</span>
           </button>
         </div>
       
@@ -214,7 +217,7 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Fetching latest news...</p>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t("fetchingNews")}</p>
             </div>
           ) : news.map((item) => (
             <div 
@@ -233,7 +236,7 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
                         </span>
                       )}
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${darkMode ? impactColors[item.impact].replace('text-', 'text-').replace('bg-', 'bg-opacity-20 ') : impactColors[item.impact]}`}>
-                        {item.impact.charAt(0).toUpperCase() + item.impact.slice(1)} Impact
+                        {t(item.impact)} {t("impact")}
                       </span>
                       {item.sentiment && (
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -243,7 +246,7 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
                             ? darkMode ? 'bg-red-900/30 text-red-400' : 'bg-red-100 text-red-800'
                             : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {item.sentiment.charAt(0).toUpperCase() + item.sentiment.slice(1)}
+                          {t(item.sentiment)}
                         </span>
                       )}
                     </div>
@@ -267,15 +270,15 @@ export const NewsSection = ({ darkMode }: { darkMode: boolean }) => {
           <div className="flex items-center justify-between">
             <div>
               <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'} mb-1`}>
-                Price Alerts
+                {t("priceAlertsTitle")}
               </h4>
               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Get notified about significant price movements
+                {t("priceAlertsSubtitle")}
               </p>
             </div>
             <button className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-9 px-3 py-2 border border-input bg-transparent shadow-sm hover:bg-accent hover:text-accent-foreground">
               <Bell className="h-4 w-4 mr-2" />
-              Set Alert
+              {t("setAlert")}
             </button>
           </div>
         </div>

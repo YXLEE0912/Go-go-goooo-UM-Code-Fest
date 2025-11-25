@@ -8,8 +8,6 @@ import {
   Bar,
   AreaChart,
   Area,
-  ScatterChart,
-  Scatter,
   ComposedChart,
   XAxis,
   YAxis,
@@ -31,6 +29,7 @@ interface DashboardScreenProps {
   darkMode: boolean
   language: Language
   chartType: string
+  setChartType: (type: string) => void
   currency: Currency
   notifications: Notification[]
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>
@@ -58,6 +57,7 @@ export const DashboardScreen = ({
   darkMode, 
   language, 
   chartType, 
+  setChartType,
   currency,
   notifications,
   setNotifications,
@@ -77,6 +77,7 @@ export const DashboardScreen = ({
   ]
 
   const t = (key: string) => translate(language, key)
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,7 +86,7 @@ export const DashboardScreen = ({
         // Pass period="Range" to bypass the specific Month/Week logic in backend and just use days
         const data = await auth.getHistory(selectedRange.days, "Range", 0, 2024)
         
-        let formattedData: { day: string; price: number }[] = []
+        let formattedData: { day: string; price: number; open?: number; high?: number; low?: number; volume?: number; color?: string }[] = []
         
         if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object') {
             formattedData = data.map((item: any) => {
@@ -96,9 +97,25 @@ export const DashboardScreen = ({
                 } else {
                     label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
                 }
+                const open = item.open ?? item.price;
+                const close = item.price;
+                const high = item.high ?? Math.max(open, close);
+                const low = item.low ?? Math.min(open, close);
+                
                 return {
                     day: label,
-                    price: item.price
+                    price: close,
+                    open: open,
+                    high: high,
+                    low: low,
+                    volume: item.volume,
+                    candleBody: [
+                        Math.min(open, close), 
+                        Math.max(open, close) === Math.min(open, close) 
+                            ? Math.max(open, close) + 0.000001 
+                            : Math.max(open, close)
+                    ],
+                    color: (close >= open) ? "#10B981" : "#EF4444"
                 }
             })
         } else if (Array.isArray(data)) {
@@ -119,7 +136,12 @@ export const DashboardScreen = ({
             
             formattedData = data.slice(-sliceSize).map((price: number, i: number) => ({
                 day: labels[i],
-                price
+                price,
+                open: price,
+                high: price,
+                low: price,
+                candleBody: [price, price + 0.000001],
+                color: "#3B82F6"
             }))
         }
         setHistoricalData(formattedData)
@@ -239,8 +261,8 @@ export const DashboardScreen = ({
         <AreaChart data={historicalData}>
           <defs>
             <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.5} />
+              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
@@ -279,38 +301,6 @@ export const DashboardScreen = ({
         </AreaChart>
       )
     }
-    if (chartType === "Scatter") {
-      return (
-        <ScatterChart data={historicalData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-          <XAxis
-            dataKey="day"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-          />
-          <YAxis
-            dataKey="price"
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-            domain={["dataMin - 5", "dataMax + 5"]}
-            tickFormatter={(value) => formatPrice(value, currency)}
-          />
-          <Tooltip
-            contentStyle={{
-              borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.1)",
-              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-              backdropFilter: "blur(10px)",
-              color: darkMode ? "white" : "black",
-            }}
-            cursor={{ strokeDasharray: "3 3" }}
-          />
-          <Scatter name="Price" dataKey="price" fill="#3B82F6" />
-        </ScatterChart>
-      )
-    }
     if (chartType === "Composed") {
       return (
         <ComposedChart data={historicalData}>
@@ -342,6 +332,100 @@ export const DashboardScreen = ({
           <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4 }} />
         </ComposedChart>
       )
+    }
+    if (chartType === "Candlestick") {
+        return (
+            <BarChart data={historicalData}>
+              <defs>
+                <linearGradient id="candleUp" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={1}/>
+                  <stop offset="95%" stopColor="#059669" stopOpacity={1}/>
+                </linearGradient>
+                <linearGradient id="candleDown" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#EF4444" stopOpacity={1}/>
+                  <stop offset="95%" stopColor="#B91C1C" stopOpacity={1}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+              <XAxis
+                dataKey="day"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+                dy={10}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+                domain={["dataMin - 5", "dataMax + 5"]}
+                tickFormatter={(value) => formatPrice(value, currency)}
+              />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: "8px",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+                  backdropFilter: "blur(10px)",
+                  color: darkMode ? "white" : "black",
+                }}
+                content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                            <div className={`p-3 rounded-lg border ${darkMode ? "bg-gray-900/90 border-white/10 text-white" : "bg-white/95 border-gray-200 text-gray-900"} backdrop-blur-md shadow-xl`}>
+                                <p className="text-sm font-medium mb-2">{label}</p>
+                                <div className="space-y-1 text-xs">
+                                    <div className="flex justify-between gap-4"><span className="text-gray-500">Open:</span> <span className="font-mono">{formatPrice(data.open, currency)}</span></div>
+                                    <div className="flex justify-between gap-4"><span className="text-gray-500">High:</span> <span className="font-mono">{formatPrice(data.high, currency)}</span></div>
+                                    <div className="flex justify-between gap-4"><span className="text-gray-500">Low:</span> <span className="font-mono">{formatPrice(data.low, currency)}</span></div>
+                                    <div className="flex justify-between gap-4"><span className="text-gray-500">Close:</span> <span className="font-mono">{formatPrice(data.price, currency)}</span></div>
+                                </div>
+                            </div>
+                        );
+                    }
+                    return null;
+                }}
+              />
+              <Bar dataKey="candleBody" shape={(props: any) => {
+                  const { x, y, width, height, payload } = props;
+                  const { open, price, high, low, candleBody } = payload;
+                  
+                  const bodyMin = candleBody[0];
+                  const bodyMax = candleBody[1];
+                  const bodyRange = bodyMax - bodyMin;
+                  const pixelsPerUnit = height / (bodyRange || 0.000001);
+                  
+                  const yHigh = y - (high - bodyMax) * pixelsPerUnit;
+                  const yLow = (y + height) + (bodyMin - low) * pixelsPerUnit;
+                  
+                  const isUp = price >= open;
+                  const fill = isUp ? "url(#candleUp)" : "url(#candleDown)";
+                  const strokeColor = isUp ? "#10B981" : "#EF4444";
+                  
+                  // Adjust width for better aesthetics (max 20px, or 60% of slot)
+                  const barWidth = Math.max(2, Math.min(20, width * 0.6));
+                  const xOffset = (width - barWidth) / 2;
+                  
+                  return (
+                    <g>
+                        <line x1={x + width / 2} y1={yHigh} x2={x + width / 2} y2={yLow} stroke={strokeColor} strokeWidth={1.5} opacity={0.8} />
+                        <rect 
+                            x={x + xOffset} 
+                            y={y} 
+                            width={barWidth} 
+                            height={Math.max(height, 1)} 
+                            fill={fill} 
+                            rx={2} 
+                            ry={2}
+                            stroke={strokeColor}
+                            strokeWidth={1}
+                        />
+                    </g>
+                  );
+              }} />
+            </BarChart>
+        )
     }
     // Default case
     return (
@@ -425,20 +509,38 @@ export const DashboardScreen = ({
             </p>
           </div>
 
-          <div className="flex gap-2 mb-6 p-1 bg-gray-100 dark:bg-white/5 rounded-lg w-fit">
-            {ranges.map((range) => (
-              <button
-                key={range.label}
-                onClick={() => setTimeRange(range.label)}
-                className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  timeRange === range.label
-                    ? `${darkMode ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20" : "bg-white text-gray-900 shadow-sm"}`
-                    : `${darkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`
-                }`}
-              >
-                {range.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+            <div className="flex gap-2 p-1 bg-gray-100 dark:bg-white/5 rounded-lg w-fit">
+              {ranges.map((range) => (
+                <button
+                  key={range.label}
+                  onClick={() => setTimeRange(range.label)}
+                  className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    timeRange === range.label
+                      ? `${darkMode ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20" : "bg-white text-gray-900 shadow-sm"}`
+                      : `${darkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+
+            <select
+              value={chartType}
+              onChange={(e) => setChartType(e.target.value)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg border outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer ${
+                darkMode 
+                  ? "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10" 
+                  : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <option value="Line">Line Chart</option>
+              <option value="Candlestick">Candlestick</option>
+              <option value="Bar">Bar Chart</option>
+              <option value="Area">Area Chart</option>
+              <option value="Composed">Composed</option>
+            </select>
           </div>
 
           <div className="h-64 w-full">

@@ -56,7 +56,11 @@ async def get_market_history(days: int = 30, period: str = "Week", month_index: 
             # index is Timestamp
             result.append({
                 "date": index.strftime("%Y-%m-%d"),
-                "price": row['Close']
+                "price": row['Close'],
+                "open": row['Open'],
+                "high": row['High'],
+                "low": row['Low'],
+                "volume": row['Volume']
             })
 
         return result
