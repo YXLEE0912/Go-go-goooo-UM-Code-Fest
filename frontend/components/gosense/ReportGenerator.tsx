@@ -1,6 +1,7 @@
+// frontend/components/gosense/ReportGenerator.tsx
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import {
   Dialog,
@@ -27,16 +28,25 @@ export function ReportGenerator({
   chatHistory,
   stockChanges,
 }: ReportGeneratorProps) {
-  const [open, setOpen] = useState(false); // controlled Dialog
+  const [open, setOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ReportType>('pdf');
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>('daily');
   const [includeCharts, setIncludeCharts] = useState(true);
   const [includeChats, setIncludeChats] = useState(true);
   const [includePredictions, setIncludePredictions] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setError(null);
+    }
+  }, [open]);
 
   const generateReport = async () => {
     setIsGenerating(true);
+    setError(null);
+    
     try {
       const reportData = {
         format: selectedFormat,
@@ -47,30 +57,68 @@ export function ReportGenerator({
         chartData: includeCharts ? chartData : null,
         predictionData: includePredictions ? predictionData : null,
         chatHistory: includeChats ? chatHistory : [],
-        stockChanges,
+        stockChanges: stockChanges || [],
         generatedAt: new Date().toISOString(),
       };
 
+      console.log('Sending report data:', reportData);
+
       const response = await fetch('/api/generate-report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(reportData),
       });
 
-      if (!response.ok) throw new Error('Failed to generate report');
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = 'Failed to generate report';
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.detail || errorMessage;
+        } catch {
+          errorMessage = `Server error: ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
 
+      // Get the blob from response
       const blob = await response.blob();
+      
+      // Check if blob is valid
+      if (blob.size === 0) {
+        throw new Error('Generated report is empty');
+      }
+      
+      // Get filename from content-disposition header or generate one
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = `report-${new Date().toISOString().split('T')[0]}.${selectedFormat}`;
+      
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) filename = match[1];
+      }
+
+      // Create download link and trigger download
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `report-${new Date().toISOString().split('T')[0]}.${selectedFormat}`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
+      
+      // Close dialog on success
+      setOpen(false);
+      
     } catch (error) {
       console.error('Error generating report:', error);
-      alert('Failed to generate report. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate report. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsGenerating(false);
     }
@@ -88,6 +136,13 @@ export function ReportGenerator({
         <DialogHeader>
           <DialogTitle>Generate Custom Report</DialogTitle>
         </DialogHeader>
+
+        {/* Error Display - Added this section */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm mb-4">
+            <strong>Error: </strong>{error}
+          </div>
+        )}
 
         <Tabs defaultValue="format" className="w-full">
           <TabsList className="grid w-full grid-cols-2">

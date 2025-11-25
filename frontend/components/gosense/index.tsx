@@ -31,7 +31,7 @@ export default function GoSenseApp() {
       if (data) {
         setPredictionData(data)
       } else if (!predictionData) {
-        // Set default prediction data if navigating from sidebar
+        // Default prediction data if none passed
         setPredictionData({
           historicalData: [],
           timePeriod: "Week",
@@ -123,4 +123,3 @@ export default function GoSenseApp() {
     </>
   )
 }
-

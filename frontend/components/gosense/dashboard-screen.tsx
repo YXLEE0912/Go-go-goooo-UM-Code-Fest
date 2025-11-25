@@ -208,9 +208,7 @@ export const DashboardScreen = ({
 
           <Card className="p-6">
             <div className="mb-6">
-              <h2 className={`text-sm font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1`}>
-                {t("historicalView")}
-              </h2>
+              <h2 className={`text-sm font-medium ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1`}>{t("historicalView")}</h2>
               <div className="flex items-end gap-3">
                 <span className={`text-4xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
                   {formatPrice(currentPrice, currency)}
@@ -245,20 +243,29 @@ export const DashboardScreen = ({
               <select
                 value={chartType}
                 onChange={(e) => setChartType(e.target.value)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg border outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer ${darkMode ? "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg border outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer ${darkMode ? "bg-white border-gray-200 text-gray-900" : "bg-white border-gray-200 text-gray-900"}`}
               >
-                <option value="Line">Line Chart</option>
-                <option value="Candlestick">Candlestick</option>
-                <option value="Bar">Bar Chart</option>
-                <option value="Area">Area Chart</option>
+                <option value="Line">Line</option>
+                <option value="Bar">Bar</option>
+                <option value="Area">Area</option>
                 <option value="Composed">Composed</option>
               </select>
             </div>
 
-            <div className="w-full h-64">
+            <div style={{ width: "100%", height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 {renderChart()}
               </ResponsiveContainer>
+            </div>
+
+            {/* Glassmorphism Predict Button below chart */}
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => onNavigate("prediction")}
+                className="px-6 py-2 rounded-2xl text-white font-medium text-sm backdrop-blur-md bg-white/20 hover:bg-white/30 transition duration-300 shadow-lg"
+              >
+                Predict Future Trends
+              </button>
             </div>
           </Card>
         </div>
