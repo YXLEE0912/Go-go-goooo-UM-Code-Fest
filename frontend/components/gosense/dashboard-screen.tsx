@@ -64,77 +64,77 @@ export const DashboardScreen = ({
   showNotifications,
   setShowNotifications
 }: DashboardScreenProps) => {
-  const [selectedPeriod, setSelectedPeriod] = useState("Week")
-  const [selectedMonth, setSelectedMonth] = useState(months[new Date().getMonth()])
-  const [selectedYear, setSelectedYear] = useState("2024")
+  const [timeRange, setTimeRange] = useState("1W")
+  const [historicalData, setHistoricalData] = useState<any[]>([])
   const [soundEnabled] = useState(true)
 
-  const years = [2023, 2024, 2025]
-
-  const getPeriodLabel = () => {
-    const currentYear = new Date().getFullYear()
-    const currentMonth = new Date().getMonth()
-    if (selectedPeriod === "Week") {
-      return `${selectedMonth} ${currentYear}`
-    } else {
-      return `${months[currentMonth]} ${selectedYear}`
-    }
-  }
+  const ranges = [
+    { label: "1W", days: 7, period: "Range" },
+    { label: "1M", days: 30, period: "Range" },
+    { label: "3M", days: 90, period: "Range" },
+    { label: "6M", days: 180, period: "Range" },
+    { label: "1Y", days: 365, period: "Range" },
+  ]
 
   const t = (key: string) => translate(language, key)
-
-  const [historicalData, setHistoricalData] = useState<any[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const days = selectedPeriod === "Week" ? 7 : 30
-        const currentYear = new Date().getFullYear()
-        const currentMonth = new Date().getMonth()
-        const year = selectedPeriod === "Month" ? Number(selectedYear) : currentYear
-        const monthIndex = selectedPeriod === "Week" ? months.indexOf(selectedMonth) : currentMonth
-        
-        const data = await auth.getHistory(days, selectedPeriod, monthIndex, year)
+        const selectedRange = ranges.find(r => r.label === timeRange) || ranges[0]
+        // Pass period="Range" to bypass the specific Month/Week logic in backend and just use days
+        const data = await auth.getHistory(selectedRange.days, "Range", 0, 2024)
         
         let formattedData: { day: string; price: number }[] = []
-        const today = new Date()
         
-        if (selectedPeriod === "Week") {
-           const labels: string[] = []
-           for(let i=6; i>=0; i--) {
-             const d = new Date(today)
-             d.setDate(d.getDate() - i)
-             labels.push(d.toLocaleDateString('en-US', { weekday: 'short' }))
-           }
-           formattedData = data.slice(-7).map((price: number, i: number) => ({
-             day: labels[i],
-             price
-           }))
-        } else {
-           const labels: string[] = []
-           for(let i=29; i>=0; i--) {
-             const d = new Date(today)
-             d.setDate(d.getDate() - i)
-             labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
-           }
-           formattedData = data.slice(-30).map((price: number, i: number) => ({
-             day: labels[i],
-             price
-           }))
+        if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object') {
+            formattedData = data.map((item: any) => {
+                const date = new Date(item.date)
+                let label = ""
+                if (timeRange === "1W" || timeRange === "1M") {
+                    label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                } else {
+                    label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+                }
+                return {
+                    day: label,
+                    price: item.price
+                }
+            })
+        } else if (Array.isArray(data)) {
+            // Fallback for old format
+            const today = new Date()
+            const sliceSize = Math.min(data.length, selectedRange.days)
+            const labels: string[] = []
+            
+            for(let i=sliceSize-1; i>=0; i--) {
+                const d = new Date(today)
+                d.setDate(d.getDate() - i)
+                if (timeRange === "1W" || timeRange === "1M") {
+                    labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
+                } else {
+                    labels.push(d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }))
+                }
+            }
+            
+            formattedData = data.slice(-sliceSize).map((price: number, i: number) => ({
+                day: labels[i],
+                price
+            }))
         }
         setHistoricalData(formattedData)
       } catch (e) {
         console.error(e)
-        setHistoricalData(generateHistoricalData(selectedPeriod, months.indexOf(selectedMonth), Number(selectedYear)))
+        setHistoricalData(generateHistoricalData("Week", 0, 2024))
       }
     }
     fetchData()
-  }, [selectedPeriod, selectedMonth, selectedYear])
+  }, [timeRange])
 
   const currentPrice = historicalData.length > 0 ? historicalData[historicalData.length - 1].price : 158.45
   const firstPrice = historicalData.length > 0 ? historicalData[0].price : 145.2
   const priceChange = currentPrice - firstPrice
-  const percentChange = ((priceChange / firstPrice) * 100).toFixed(2)
+  const percentChange = firstPrice !== 0 ? ((priceChange / firstPrice) * 100).toFixed(2) : "0.00"
 
   useEffect(() => {
     if (historicalData.length >= 2) {
@@ -143,41 +143,23 @@ export const DashboardScreen = ({
       const priceChange = lastPrice - firstPrice
       const percentChange = (priceChange / firstPrice) * 100
 
-      if (percentChange < -2) {
+      if (percentChange < -5) {
         const newNotification = {
           id: Date.now().toString(),
-          message: `Risk Alert: NVIDIA stock dropped ${Math.abs(percentChange).toFixed(2)}% in selected period. High volatility detected.`,
+          message: `Risk Alert: Significant drop of ${Math.abs(percentChange).toFixed(2)}% detected in the last ${timeRange}.`,
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           read: false,
         }
         setNotifications((prev) => {
           if (prev.length === 0 || prev[0].message !== newNotification.message) {
-            if (soundEnabled) {
-              playNotificationSound()
-            }
-            return [newNotification, ...prev.slice(0, 9)]
-          }
-          return prev
-        })
-      } else if (Math.abs(percentChange) > 5) {
-        const newNotification = {
-          id: Date.now().toString(),
-          message: `Alert: High volatility detected. Stock moved ${percentChange.toFixed(2)}% in ${selectedPeriod.toLowerCase()}.`,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          read: false,
-        }
-        setNotifications((prev) => {
-          if (prev.length === 0 || prev[0].message !== newNotification.message) {
-            if (soundEnabled) {
-              playNotificationSound()
-            }
+            if (soundEnabled) playNotificationSound()
             return [newNotification, ...prev.slice(0, 9)]
           }
           return prev
         })
       }
     }
-  }, [historicalData, soundEnabled])
+  }, [historicalData, soundEnabled, timeRange])
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
@@ -435,60 +417,28 @@ export const DashboardScreen = ({
                 {formatPrice(priceChange, currency).replace(/^[^0-9-]+/, "")} ({percentChange}%)
               </span>
             </div>
-            <p className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-600"} mt-2`}>{getPeriodLabel()}</p>
+            <p className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-600"} mt-2`}>
+              {timeRange === "1W" ? "Last 7 Days" : 
+               timeRange === "1M" ? "Last 30 Days" : 
+               timeRange === "3M" ? "Last 3 Months" : 
+               timeRange === "6M" ? "Last 6 Months" : "Last Year"}
+            </p>
           </div>
 
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => setSelectedPeriod("Week")}
-              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                selectedPeriod === "Week"
-                  ? `${darkMode ? "bg-white text-gray-900" : "bg-gray-900 text-white"}`
-                  : `${darkMode ? "bg-white/10 text-gray-400" : "bg-gray-200 text-gray-600"} hover:bg-white/20 backdrop-blur-sm`
-              }`}
-            >
-              {t("week")}
-            </button>
-            <button
-              onClick={() => setSelectedPeriod("Month")}
-              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                selectedPeriod === "Month"
-                  ? `${darkMode ? "bg-white text-gray-900" : "bg-gray-900 text-white"}`
-                  : `${darkMode ? "bg-white/10 text-gray-400" : "bg-gray-200 text-gray-600"} hover:bg-white/20 backdrop-blur-sm`
-              }`}
-            >
-              {t("month")}
-            </button>
-          </div>
-
-          <div className="flex gap-3 mb-6">
-            {selectedPeriod === "Week" && (
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className={`px-3 py-2 text-sm rounded-lg border ${darkMode ? "border-white/10 bg-white/5 text-white" : "border-gray-300 bg-white text-gray-900"} backdrop-blur-md focus:ring-2 focus:ring-blue-500/20 outline-none`}
+          <div className="flex gap-2 mb-6 p-1 bg-gray-100 dark:bg-white/5 rounded-lg w-fit">
+            {ranges.map((range) => (
+              <button
+                key={range.label}
+                onClick={() => setTimeRange(range.label)}
+                className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  timeRange === range.label
+                    ? `${darkMode ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20" : "bg-white text-gray-900 shadow-sm"}`
+                    : `${darkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`
+                }`}
               >
-                {months.map((month) => (
-                  <option key={month} value={month} className={darkMode ? "bg-gray-900" : "bg-white"}>
-                    {month}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {selectedPeriod === "Month" && (
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                className={`px-3 py-2 text-sm rounded-lg border ${darkMode ? "border-white/10 bg-white/5 text-white" : "border-gray-300 bg-white text-gray-900"} backdrop-blur-md focus:ring-2 focus:ring-blue-500/20 outline-none`}
-              >
-                {years.map((year) => (
-                  <option key={year} value={year} className={darkMode ? "bg-gray-900" : "bg-white"}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            )}
+                {range.label}
+              </button>
+            ))}
           </div>
 
           <div className="h-64 w-full">
@@ -503,9 +453,7 @@ export const DashboardScreen = ({
               onClick={() =>
                 onNavigate("prediction", {
                   historicalData,
-                  timePeriod: selectedPeriod,
-                  selectedMonth,
-                  selectedYear,
+                  timePeriod: timeRange,
                 })
               }
             >

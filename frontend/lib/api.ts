@@ -115,7 +115,7 @@ export const auth = {
   },
 
   async getHistory(days: number = 30, period: string = "Week", monthIndex: number = 0, year: number = 2024) {
-    return api.get(`/api/history?days=${days}&period=${period}&month_index=${monthIndex}&year=${year}`)
+    return api.get(`/api/market/history?days=${days}&period=${period}&month_index=${monthIndex}&year=${year}`)
   },
 
   async getNews() {
