@@ -1,4 +1,3 @@
-// frontend/components/gosense/ReportGenerator.tsx
 "use client"
 
 import { useState, useEffect } from 'react';
@@ -8,7 +7,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '../ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
@@ -28,7 +26,7 @@ export function ReportGenerator({
   chatHistory,
   stockChanges,
 }: ReportGeneratorProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ReportType>('pdf');
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>('daily');
@@ -38,15 +36,13 @@ export function ReportGenerator({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
-      setError(null);
-    }
+    if (open) setError(null);
   }, [open]);
 
   const generateReport = async () => {
     setIsGenerating(true);
     setError(null);
-    
+
     try {
       const reportData = {
         format: selectedFormat,
@@ -65,44 +61,32 @@ export function ReportGenerator({
 
       const response = await fetch('/api/generate-report', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reportData),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         let errorMessage = 'Failed to generate report';
-        
         try {
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.detail || errorMessage;
         } catch {
           errorMessage = `Server error: ${response.status}`;
         }
-        
         throw new Error(errorMessage);
       }
 
-      // Get the blob from response
       const blob = await response.blob();
-      
-      // Check if blob is valid
-      if (blob.size === 0) {
-        throw new Error('Generated report is empty');
-      }
-      
-      // Get filename from content-disposition header or generate one
+      if (blob.size === 0) throw new Error('Generated report is empty');
+
       const contentDisposition = response.headers.get('content-disposition');
       let filename = `report-${new Date().toISOString().split('T')[0]}.${selectedFormat}`;
-      
       if (contentDisposition) {
         const match = contentDisposition.match(/filename="(.+)"/);
         if (match) filename = match[1];
       }
 
-      // Create download link and trigger download
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -111,10 +95,9 @@ export function ReportGenerator({
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
-      
-      // Close dialog on success
+
       setOpen(false);
-      
+
     } catch (error) {
       console.error('Error generating report:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate report. Please try again.';
@@ -126,18 +109,14 @@ export function ReportGenerator({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="ml-4" onClick={() => setOpen(true)}>
-          Generate Report
-        </Button>
-      </DialogTrigger>
-
-      <DialogContent className="max-w-2xl">
+      <DialogContent
+        className="max-w-2xl p-6 rounded-2xl bg-white/20 backdrop-blur-lg border border-white/30 shadow-lg"
+        style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(15px)" }}
+      >
         <DialogHeader>
-          <DialogTitle>Generate Custom Report</DialogTitle>
+          <DialogTitle className="text-white">Generate Custom Report</DialogTitle>
         </DialogHeader>
 
-        {/* Error Display - Added this section */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm mb-4">
             <strong>Error: </strong>{error}
@@ -153,7 +132,7 @@ export function ReportGenerator({
           <TabsContent value="format" className="space-y-4 pt-4">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Report Format</label>
+                <label className="block text-sm font-medium mb-2 text-white">Report Format</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['pdf', 'excel', 'word', 'ppt'] as ReportType[]).map((format) => (
                     <Button
@@ -169,7 +148,7 @@ export function ReportGenerator({
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Report Period</label>
+                <label className="block text-sm font-medium mb-2 text-white">Report Period</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['daily', 'weekly', 'monthly'] as ReportPeriod[]).map((period) => (
                     <Button
@@ -196,7 +175,7 @@ export function ReportGenerator({
                   onChange={(e) => setIncludeCharts(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
-                <label htmlFor="includeCharts" className="text-sm font-medium">
+                <label htmlFor="includeCharts" className="text-sm font-medium text-white">
                   Include Historical Charts
                 </label>
               </div>
@@ -209,7 +188,7 @@ export function ReportGenerator({
                   onChange={(e) => setIncludePredictions(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
-                <label htmlFor="includePredictions" className="text-sm font-medium">
+                <label htmlFor="includePredictions" className="text-sm font-medium text-white">
                   Include AI Predictions
                 </label>
               </div>
@@ -222,7 +201,7 @@ export function ReportGenerator({
                   onChange={(e) => setIncludeChats(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
-                <label htmlFor="includeChats" className="text-sm font-medium">
+                <label htmlFor="includeChats" className="text-sm font-medium text-white">
                   Include Chat History
                 </label>
               </div>
