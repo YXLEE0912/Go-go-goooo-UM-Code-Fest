@@ -62,3 +62,14 @@ class TwoFactorRecoveryRequest(BaseModel):
 class TwoFactorRecoveryConfirm(BaseModel):
     email: EmailStr
     code: str
+
+class ChatMessage(BaseModel):
+    role: str  # "user" or "assistant"
+    content: str
+    timestamp: str
+    sources: Optional[list] = None
+
+class ChatSession(BaseModel):
+    user_id: str
+    session_id: str
+    messages: list[ChatMessage] = []

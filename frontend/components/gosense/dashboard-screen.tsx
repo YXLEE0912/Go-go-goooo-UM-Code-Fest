@@ -21,6 +21,7 @@ import { TrendingUp, Settings } from "lucide-react"
 import { Card, Button } from "./ui-components"
 import { NotificationPanel } from "./notification-panel"
 import { generateHistoricalData, playNotificationSound } from "../../lib/gosense-data"
+import { auth } from "../../lib/api"
 import { translate, type Language } from "../../lib/gosense-translations"
 import type { Notification } from "../../lib/gosense-types"
 import { formatPrice, type Currency } from "../../lib/gosense-currency"
@@ -33,49 +34,97 @@ interface DashboardScreenProps {
   currency: Currency
 }
 
+const months = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+]
+
 export const DashboardScreen = ({ onNavigate, darkMode, language, chartType, currency }: DashboardScreenProps) => {
   const [selectedPeriod, setSelectedPeriod] = useState("Week")
-  const [selectedMonth, setSelectedMonth] = useState("January")
+  const [selectedMonth, setSelectedMonth] = useState(months[new Date().getMonth()])
   const [selectedYear, setSelectedYear] = useState("2024")
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
   const [soundEnabled] = useState(true)
 
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ]
   const years = [2023, 2024, 2025]
 
   const getPeriodLabel = () => {
+    const currentYear = new Date().getFullYear()
+    const currentMonth = new Date().getMonth()
     if (selectedPeriod === "Week") {
-      return `${selectedMonth} Week`
+      return `${selectedMonth} ${currentYear}`
     } else {
-      return `${selectedYear}`
+      return `${months[currentMonth]} ${selectedYear}`
     }
   }
 
   const t = (key: string) => translate(language, key)
 
-  const historicalData = generateHistoricalData(selectedPeriod, months.indexOf(selectedMonth), Number(selectedYear))
+  const [historicalData, setHistoricalData] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const days = selectedPeriod === "Week" ? 7 : 30
+        const currentYear = new Date().getFullYear()
+        const currentMonth = new Date().getMonth()
+        const year = selectedPeriod === "Month" ? Number(selectedYear) : currentYear
+        const monthIndex = selectedPeriod === "Week" ? months.indexOf(selectedMonth) : currentMonth
+        
+        const data = await auth.getHistory(days, selectedPeriod, monthIndex, year)
+        
+        let formattedData: { day: string; price: number }[] = []
+        const today = new Date()
+        
+        if (selectedPeriod === "Week") {
+           const labels: string[] = []
+           for(let i=6; i>=0; i--) {
+             const d = new Date(today)
+             d.setDate(d.getDate() - i)
+             labels.push(d.toLocaleDateString('en-US', { weekday: 'short' }))
+           }
+           formattedData = data.slice(-7).map((price: number, i: number) => ({
+             day: labels[i],
+             price
+           }))
+        } else {
+           const labels: string[] = []
+           for(let i=29; i>=0; i--) {
+             const d = new Date(today)
+             d.setDate(d.getDate() - i)
+             labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
+           }
+           formattedData = data.slice(-30).map((price: number, i: number) => ({
+             day: labels[i],
+             price
+           }))
+        }
+        setHistoricalData(formattedData)
+      } catch (e) {
+        console.error(e)
+        setHistoricalData(generateHistoricalData(selectedPeriod, months.indexOf(selectedMonth), Number(selectedYear)))
+      }
+    }
+    fetchData()
+  }, [selectedPeriod, selectedMonth, selectedYear])
+
   const currentPrice = historicalData.length > 0 ? historicalData[historicalData.length - 1].price : 158.45
   const firstPrice = historicalData.length > 0 ? historicalData[0].price : 145.2
   const priceChange = currentPrice - firstPrice
   const percentChange = ((priceChange / firstPrice) * 100).toFixed(2)
 
   useEffect(() => {
-    const historicalData = generateHistoricalData(selectedPeriod, months.indexOf(selectedMonth), Number(selectedYear))
-
     if (historicalData.length >= 2) {
       const lastPrice = historicalData[historicalData.length - 1].price
       const firstPrice = historicalData[0].price
@@ -116,9 +165,221 @@ export const DashboardScreen = ({ onNavigate, darkMode, language, chartType, cur
         })
       }
     }
-  }, [selectedPeriod, selectedMonth, selectedYear, soundEnabled])
+  }, [historicalData, soundEnabled])
 
   const unreadCount = notifications.filter((n) => !n.read).length
+
+  const renderChart = () => {
+    if (chartType === "Line") {
+      return (
+        <LineChart data={historicalData}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+            dy={10}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+            domain={["dataMin - 5", "dataMax + 5"]}
+            tickFormatter={(value) => formatPrice(value, currency)}
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: "8px",
+              border: "1px solid rgba(255,255,255,0.1)",
+              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              color: darkMode ? "white" : "black",
+            }}
+            cursor={{ stroke: "#3B82F6", strokeWidth: 2 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="price"
+            stroke="#3B82F6"
+            strokeWidth={3}
+            dot={{ r: 4, fill: "#3B82F6", strokeWidth: 0 }}
+            activeDot={{ r: 6, fill: "#3B82F6" }}
+          />
+        </LineChart>
+      )
+    }
+    if (chartType === "Bar") {
+      return (
+        <BarChart data={historicalData}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+            dy={10}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+            domain={["dataMin - 5", "dataMax + 5"]}
+            tickFormatter={(value) => formatPrice(value, currency)}
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: "8px",
+              border: "1px solid rgba(255,255,255,0.1)",
+              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              color: darkMode ? "white" : "black",
+            }}
+          />
+          <Bar dataKey="price" fill="#3B82F6" radius={[8, 8, 0, 0]} />
+        </BarChart>
+      )
+    }
+    if (chartType === "Area") {
+      return (
+        <AreaChart data={historicalData}>
+          <defs>
+            <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+            dy={10}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+            domain={["dataMin - 5", "dataMax + 5"]}
+            tickFormatter={(value) => formatPrice(value, currency)}
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: "8px",
+              border: "1px solid rgba(255,255,255,0.1)",
+              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              color: darkMode ? "white" : "black",
+            }}
+            cursor={{ stroke: "#3B82F6", strokeWidth: 2 }}
+          />
+          <Area
+            type="monotone"
+            dataKey="price"
+            stroke="#3B82F6"
+            strokeWidth={3}
+            fill="url(#colorPrice)"
+            fillOpacity={1}
+          />
+        </AreaChart>
+      )
+    }
+    if (chartType === "Scatter") {
+      return (
+        <ScatterChart data={historicalData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+          />
+          <YAxis
+            dataKey="price"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+            domain={["dataMin - 5", "dataMax + 5"]}
+            tickFormatter={(value) => formatPrice(value, currency)}
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: "8px",
+              border: "1px solid rgba(255,255,255,0.1)",
+              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              color: darkMode ? "white" : "black",
+            }}
+            cursor={{ strokeDasharray: "3 3" }}
+          />
+          <Scatter name="Price" dataKey="price" fill="#3B82F6" />
+        </ScatterChart>
+      )
+    }
+    if (chartType === "Composed") {
+      return (
+        <ComposedChart data={historicalData}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+            dy={10}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+            domain={["dataMin - 5", "dataMax + 5"]}
+            tickFormatter={(value) => formatPrice(value, currency)}
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: "8px",
+              border: "1px solid rgba(255,255,255,0.1)",
+              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              color: darkMode ? "white" : "black",
+            }}
+          />
+          <Bar dataKey="price" fill="#3B82F6" radius={[8, 8, 0, 0]} fillOpacity={0.3} />
+          <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4 }} />
+        </ComposedChart>
+      )
+    }
+    // Default case
+    return (
+      <LineChart data={historicalData}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+        <XAxis
+          dataKey="day"
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+          dy={10}
+        />
+        <YAxis
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
+          domain={["dataMin - 5", "dataMax + 5"]}
+          tickFormatter={(value) => formatPrice(value, currency)}
+        />
+        <Tooltip
+          contentStyle={{
+            borderRadius: "8px",
+            border: "1px solid rgba(255,255,255,0.1)",
+            backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(10px)",
+            color: darkMode ? "white" : "black",
+          }}
+        />
+        <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4 }} />
+      </LineChart>
+    )
+  }
 
   return (
     <div
@@ -250,204 +511,7 @@ export const DashboardScreen = ({ onNavigate, darkMode, language, chartType, cur
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              {chartType === "Line" && (
-                <LineChart data={historicalData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                  <XAxis
-                    dataKey="day"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    domain={["dataMin - 5", "dataMax + 5"]}
-                    tickFormatter={(value) => formatPrice(value, currency)}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(10px)",
-                      color: darkMode ? "white" : "black",
-                    }}
-                    cursor={{ stroke: "#3B82F6", strokeWidth: 2 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="price"
-                    stroke="#3B82F6"
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: "#3B82F6", strokeWidth: 0 }}
-                    activeDot={{ r: 6, fill: "#3B82F6" }}
-                  />
-                </LineChart>
-              )}
-              {chartType === "Bar" && (
-                <BarChart data={historicalData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                  <XAxis
-                    dataKey="day"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    domain={["dataMin - 5", "dataMax + 5"]}
-                    tickFormatter={(value) => formatPrice(value, currency)}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(10px)",
-                      color: darkMode ? "white" : "black",
-                    }}
-                  />
-                  <Bar dataKey="price" fill="#3B82F6" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              )}
-              {chartType === "Area" && (
-                <AreaChart data={historicalData}>
-                  <defs>
-                    <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                  <XAxis
-                    dataKey="day"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    domain={["dataMin - 5", "dataMax + 5"]}
-                    tickFormatter={(value) => formatPrice(value, currency)}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(10px)",
-                      color: darkMode ? "white" : "black",
-                    }}
-                    cursor={{ stroke: "#3B82F6", strokeWidth: 2 }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="price"
-                    stroke="#3B82F6"
-                    strokeWidth={3}
-                    fill="url(#colorPrice)"
-                    fillOpacity={1}
-                  />
-                </AreaChart>
-              )}
-              {chartType === "Scatter" && (
-                <ScatterChart data={historicalData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                  <XAxis
-                    dataKey="day"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                  />
-                  <YAxis
-                    dataKey="price"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    domain={["dataMin - 5", "dataMax + 5"]}
-                    tickFormatter={(value) => formatPrice(value, currency)}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(10px)",
-                      color: darkMode ? "white" : "black",
-                    }}
-                    cursor={{ strokeDasharray: "3 3" }}
-                  />
-                  <Scatter name="Price" dataKey="price" fill="#3B82F6" />
-                </ScatterChart>
-              )}
-              {chartType === "Composed" && (
-                <ComposedChart data={historicalData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                  <XAxis
-                    dataKey="day"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    domain={["dataMin - 5", "dataMax + 5"]}
-                    tickFormatter={(value) => formatPrice(value, currency)}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(10px)",
-                      color: darkMode ? "white" : "black",
-                    }}
-                  />
-                  <Bar dataKey="price" fill="#3B82F6" radius={[8, 8, 0, 0]} fillOpacity={0.3} />
-                  <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4 }} />
-                </ComposedChart>
-              )}
-              {(chartType === "Candlestick" || chartType === "Pie" || chartType === "Radar") && (
-                <LineChart data={historicalData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
-                  <XAxis
-                    dataKey="day"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: darkMode ? "#9CA3AF" : "#4B5563", fontSize: 12 }}
-                    domain={["dataMin - 5", "dataMax + 5"]}
-                    tickFormatter={(value) => formatPrice(value, currency)}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                      backdropFilter: "blur(10px)",
-                      color: darkMode ? "white" : "black",
-                    }}
-                  />
-                  <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4 }} />
-                </LineChart>
-              )}
+              {renderChart()}
             </ResponsiveContainer>
           </div>
 

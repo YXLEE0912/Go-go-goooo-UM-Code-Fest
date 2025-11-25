@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { MessageCircle, Send, Activity } from "lucide-react"
 import { Card, Input } from "./ui-components"
@@ -24,6 +24,42 @@ What would you like to know?`,
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (showChat) {
+      loadChatHistory()
+    }
+  }, [showChat])
+
+  const loadChatHistory = async () => {
+    try {
+      const sessions = await auth.getChatHistory()
+      if (sessions && sessions.length > 0) {
+        // Load the most recent session
+        const lastSession = sessions[sessions.length - 1]
+        setSessionId(lastSession.session_id)
+        
+        const historyMessages = lastSession.messages.map((msg: any) => ({
+          type: msg.role === "user" ? "user" : "ai",
+          content: msg.content,
+          sources: msg.sources
+        }))
+        
+        // Only append if we haven't loaded history yet (check if we have more than the welcome message)
+        // Since component unmounts on close, this runs on every open.
+        // We keep the welcome message and append history.
+        setMessages(prev => {
+          if (prev.length === 1) {
+            return [...prev, ...historyMessages]
+          }
+          return prev
+        })
+      }
+    } catch (error) {
+      console.error("Failed to load chat history", error)
+    }
+  }
 
   const handleSendMessage = async () => {
     if (!input.trim() || loading) return
@@ -40,7 +76,11 @@ What would you like to know?`,
         content: m.content
       }))
 
-      const response = await auth.chat(userMessage.content, history)
+      const response = await auth.chat(userMessage.content, history, sessionId || undefined)
+      
+      if (response.session_id) {
+        setSessionId(response.session_id)
+      }
       
       setMessages((prev) => [...prev, { 
         type: "ai", 

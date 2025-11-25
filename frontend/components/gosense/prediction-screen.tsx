@@ -24,6 +24,9 @@ import { Button } from "../ui/button"
 import { ChatModal } from "./chat-modal"
 import { NewsSection } from "./news-section"
 import { generateForecastData } from "../../lib/gosense-data"
+import { auth } from "../../lib/api"
+import { useState, useEffect } from "react"
+
 interface EnhancedPredictionData {
   day: string
   historical: number | null
@@ -54,15 +57,52 @@ export const PredictionScreen = ({
   chartType,
   currency,
 }: PredictionScreenProps) => {
-  const forecastData = predictionData?.historicalData
-    ? generateForecastData(predictionData.historicalData, predictionData.timePeriod)
-    : []
+  const [forecastData, setForecastData] = useState<any[]>([])
 
-  // Safely get the last historical and forecast prices with fallbacks
-  const lastHistoricalPrice = forecastData.find((d) => d.historical !== null)?.historical ?? 158.45
-  const lastForecastPrice = forecastData[forecastData.length - 1]?.forecast ?? 170.25
-  const predictedChange = lastForecastPrice - lastHistoricalPrice
-  const predictedPercent = ((predictedChange / lastHistoricalPrice) * 100).toFixed(2)
+  useEffect(() => {
+    const loadForecast = async () => {
+      try {
+        const days = 7 // Always show next 7 days prediction
+        const response = await auth.predict(days)
+        
+        if (response.forecast && response.forecast.length > 0) {
+           // Generate labels for the next 7 days
+           const labels: string[] = []
+           const today = new Date();
+           for (let i = 1; i <= days; i++) {
+             const nextDate = new Date(today);
+             nextDate.setDate(today.getDate() + i);
+             labels.push(nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+           }
+           
+           const forecastData = response.forecast.map((price: number, i: number) => ({
+             day: labels[i] || `Day ${i+1}`,
+             historical: null,
+             forecast: Number(price.toFixed(2))
+           }))
+           
+           setForecastData(forecastData)
+        } else {
+           // Fallback to generated data if API fails
+           const generated = generateForecastData([], 'Week').filter(d => d.forecast !== null)
+           setForecastData(generated)
+        }
+      } catch (e) {
+        console.error("Prediction error:", e)
+        // Fallback to generated forecast data
+        const generated = generateForecastData([], 'Week').filter(d => d.forecast !== null)
+        setForecastData(generated)
+      }
+    }
+    
+    loadForecast()
+  }, [predictionData])
+
+  // Since we only show forecast data, use the first forecast as "current" price
+  const firstForecastPrice = forecastData.length > 0 ? (forecastData[0]?.forecast ?? 160.00) : 160.00
+  const lastForecastPrice = forecastData.length > 0 ? (forecastData[forecastData.length - 1]?.forecast ?? 170.00) : 170.00
+  const predictedChange = lastForecastPrice - firstForecastPrice
+  const predictedPercent = firstForecastPrice !== 0 ? ((predictedChange / firstForecastPrice) * 100).toFixed(2) : "0.00"
 
   // Calculate percentage changes for each data point with proper null checks
   const enhancedData: EnhancedPredictionData[] = forecastData.map((item, index, array) => {
@@ -98,6 +138,342 @@ export const PredictionScreen = ({
   })
 
   const t = (key: string) => translate(language, key)
+
+  const renderChart = () => {
+    if (chartType === "Line") {
+      return (
+        <LineChart data={forecastData}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+          />
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+            angle={-45}
+            textAnchor="end"
+            height={80}
+          />
+          <YAxis
+            domain={["dataMin - 5", "dataMax + 5"]}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+            tickFormatter={(val) => formatPrice(val, currency)}
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: "8px",
+              border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              color: darkMode ? "white" : "black",
+            }}
+          />
+          <Legend />
+          <Line
+            type="monotone"
+            dataKey="historical"
+            stroke="#60A5FA"
+            strokeWidth={3}
+            dot={{ r: 4, fill: "#60A5FA" }}
+            name={t("historicalData")}
+            connectNulls={false}
+          />
+          <Line
+            type="monotone"
+            dataKey="forecast"
+            stroke="#10B981"
+            strokeWidth={3}
+            strokeDasharray="5 5"
+            dot={{ r: 4, fill: "#10B981" }}
+            name={t("aiForecast")}
+            connectNulls={false}
+          />
+        </LineChart>
+      )
+    }
+    if (chartType === "Bar") {
+      return (
+        <BarChart data={forecastData}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+          />
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+            angle={-45}
+            textAnchor="end"
+            height={80}
+          />
+          <YAxis
+            domain={["dataMin - 5", "dataMax + 5"]}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+            tickFormatter={(val) => formatPrice(val, currency)}
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: "8px",
+              border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              color: darkMode ? "white" : "black",
+            }}
+          />
+          <Legend />
+          <Bar dataKey="historical" fill="#60A5FA" name={t("historicalData")} radius={[8, 8, 0, 0]} />
+          <Bar dataKey="forecast" fill="#10B981" name={t("aiForecast")} radius={[8, 8, 0, 0]} />
+        </BarChart>
+      )
+    }
+    if (chartType === "Area") {
+      return (
+        <AreaChart data={forecastData}>
+          <defs>
+            <linearGradient id="colorHistorical" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#60A5FA" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#60A5FA" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+          />
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+            angle={-45}
+            textAnchor="end"
+            height={80}
+          />
+          <YAxis
+            domain={["dataMin - 5", "dataMax + 5"]}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+            tickFormatter={(val) => formatPrice(val, currency)}
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: "8px",
+              border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              color: darkMode ? "white" : "black",
+            }}
+          />
+          <Legend />
+          <Area
+            type="monotone"
+            dataKey="historical"
+            stroke="#60A5FA"
+            strokeWidth={3}
+            fill="url(#colorHistorical)"
+            name={t("historicalData")}
+            connectNulls={false}
+          />
+          <Area
+            type="monotone"
+            dataKey="forecast"
+            stroke="#10B981"
+            strokeWidth={3}
+            strokeDasharray="5 5"
+            fill="url(#colorForecast)"
+            name={t("aiForecast")}
+            connectNulls={false}
+          />
+        </AreaChart>
+      )
+    }
+    if (chartType === "Scatter") {
+      return (
+        <ScatterChart>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+          />
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+            angle={-45}
+            textAnchor="end"
+            height={80}
+          />
+          <YAxis
+            domain={["dataMin - 5", "dataMax + 5"]}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+            tickFormatter={(val) => formatPrice(val, currency)}
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: "8px",
+              border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              color: darkMode ? "white" : "black",
+            }}
+            cursor={{ strokeDasharray: "3 3" }}
+          />
+          <Legend />
+          <Scatter
+            name={t("historicalData")}
+            data={forecastData.filter((d) => d.historical !== null)}
+            fill="#60A5FA"
+            dataKey="historical"
+          />
+          <Scatter
+            name={t("aiForecast")}
+            data={forecastData.filter((d) => d.forecast !== null)}
+            fill="#10B981"
+            dataKey="forecast"
+          />
+        </ScatterChart>
+      )
+    }
+    if (chartType === "Composed") {
+      return (
+        <ComposedChart data={forecastData}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+          />
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+            angle={-45}
+            textAnchor="end"
+            height={80}
+          />
+          <YAxis
+            domain={["dataMin - 5", "dataMax + 5"]}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+            tickFormatter={(val) => formatPrice(val, currency)}
+          />
+          <Tooltip
+            contentStyle={{
+              borderRadius: "8px",
+              border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+              backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(10px)",
+              color: darkMode ? "white" : "black",
+            }}
+          />
+          <Legend />
+          <Bar
+            dataKey="historical"
+            fill="#60A5FA"
+            name={t("historicalData")}
+            fillOpacity={0.3}
+            radius={[8, 8, 0, 0]}
+          />
+          <Bar
+            dataKey="forecast"
+            fill="#10B981"
+            name={t("aiForecast")}
+            fillOpacity={0.3}
+            radius={[8, 8, 0, 0]}
+          />
+          <Line
+            type="monotone"
+            dataKey="historical"
+            stroke="#60A5FA"
+            strokeWidth={3}
+            dot={{ r: 4 }}
+            connectNulls={false}
+          />
+          <Line
+            type="monotone"
+            dataKey="forecast"
+            stroke="#10B981"
+            strokeWidth={3}
+            strokeDasharray="5 5"
+            dot={{ r: 4 }}
+            connectNulls={false}
+          />
+        </ComposedChart>
+      )
+    }
+    // Default case for Candlestick, Pie, Radar
+    return (
+      <LineChart data={forecastData}>
+        <CartesianGrid
+          strokeDasharray="3 3"
+          vertical={false}
+          stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+        />
+        <XAxis
+          dataKey="day"
+          axisLine={false}
+          tickLine={false}
+          tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+          angle={-45}
+          textAnchor="end"
+          height={80}
+        />
+        <YAxis
+          domain={["dataMin - 5", "dataMax + 5"]}
+          axisLine={false}
+          tickLine={false}
+          tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
+          tickFormatter={(val) => formatPrice(val, currency)}
+        />
+        <Tooltip
+          contentStyle={{
+            borderRadius: "8px",
+            border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+            backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(10px)",
+            color: darkMode ? "white" : "black",
+          }}
+        />
+        <Legend />
+        <Line
+          type="monotone"
+          dataKey="historical"
+          stroke="#60A5FA"
+          strokeWidth={3}
+          dot={{ r: 4 }}
+          name={t("historicalData")}
+          connectNulls={false}
+        />
+        <Line
+          type="monotone"
+          dataKey="forecast"
+          stroke="#10B981"
+          strokeWidth={3}
+          strokeDasharray="5 5"
+          dot={{ r: 4 }}
+          name={t("aiForecast")}
+          connectNulls={false}
+        />
+      </LineChart>
+    )
+  }
 
   return (
     <div
@@ -151,9 +527,9 @@ export const PredictionScreen = ({
                 className={`grid grid-cols-2 gap-4 pt-4 border-t ${darkMode ? "border-white/10" : "border-gray-200"}`}
               >
                 <div>
-                  <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1`}>{t("lastClose")}</p>
+                  <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-600"} mb-1`}>{t("currentPrice")}</p>
                   <p className={`font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
-                    {formatPrice(lastHistoricalPrice, currency)}
+                    {formatPrice(firstForecastPrice, currency)}
                   </p>
                 </div>
                 <div>
@@ -174,333 +550,12 @@ export const PredictionScreen = ({
                 <span
                   className={`text-xs font-medium ${darkMode ? "text-gray-400 bg-white/10" : "text-gray-600 bg-gray-100"} backdrop-blur-sm px-2 py-1 rounded border ${darkMode ? "border-white/10" : "border-gray-200"}`}
                 >
-                  {t("historicalVsForecast")}
+                  7-Day Forecast
                 </span>
               </div>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  {chartType === "Line" && (
-                    <LineChart data={forecastData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
-                      />
-                      <XAxis
-                        dataKey="day"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis
-                        domain={["dataMin - 5", "dataMax + 5"]}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        tickFormatter={(val) => formatPrice(val, currency)}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "8px",
-                          border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                          backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                          backdropFilter: "blur(10px)",
-                          color: darkMode ? "white" : "black",
-                        }}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="historical"
-                        stroke="#60A5FA"
-                        strokeWidth={3}
-                        dot={{ r: 4, fill: "#60A5FA" }}
-                        name={t("historicalData")}
-                        connectNulls={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="forecast"
-                        stroke="#10B981"
-                        strokeWidth={3}
-                        strokeDasharray="5 5"
-                        dot={{ r: 4, fill: "#10B981" }}
-                        name={t("aiForecast")}
-                        connectNulls={false}
-                      />
-                    </LineChart>
-                  )}
-                  {chartType === "Bar" && (
-                    <BarChart data={forecastData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
-                      />
-                      <XAxis
-                        dataKey="day"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis
-                        domain={["dataMin - 5", "dataMax + 5"]}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        tickFormatter={(val) => formatPrice(val, currency)}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "8px",
-                          border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                          backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                          backdropFilter: "blur(10px)",
-                          color: darkMode ? "white" : "black",
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="historical" fill="#60A5FA" name={t("historicalData")} radius={[8, 8, 0, 0]} />
-                      <Bar dataKey="forecast" fill="#10B981" name={t("aiForecast")} radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  )}
-                  {chartType === "Area" && (
-                    <AreaChart data={forecastData}>
-                      <defs>
-                        <linearGradient id="colorHistorical" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#60A5FA" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#60A5FA" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
-                      />
-                      <XAxis
-                        dataKey="day"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis
-                        domain={["dataMin - 5", "dataMax + 5"]}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        tickFormatter={(val) => formatPrice(val, currency)}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "8px",
-                          border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                          backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                          backdropFilter: "blur(10px)",
-                          color: darkMode ? "white" : "black",
-                        }}
-                      />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="historical"
-                        stroke="#60A5FA"
-                        strokeWidth={3}
-                        fill="url(#colorHistorical)"
-                        name={t("historicalData")}
-                        connectNulls={false}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="forecast"
-                        stroke="#10B981"
-                        strokeWidth={3}
-                        strokeDasharray="5 5"
-                        fill="url(#colorForecast)"
-                        name={t("aiForecast")}
-                        connectNulls={false}
-                      />
-                    </AreaChart>
-                  )}
-                  {chartType === "Scatter" && (
-                    <ScatterChart>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
-                      />
-                      <XAxis
-                        dataKey="day"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis
-                        domain={["dataMin - 5", "dataMax + 5"]}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        tickFormatter={(val) => formatPrice(val, currency)}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "8px",
-                          border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                          backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                          backdropFilter: "blur(10px)",
-                          color: darkMode ? "white" : "black",
-                        }}
-                        cursor={{ strokeDasharray: "3 3" }}
-                      />
-                      <Legend />
-                      <Scatter
-                        name={t("historicalData")}
-                        data={forecastData.filter((d) => d.historical !== null)}
-                        fill="#60A5FA"
-                        dataKey="historical"
-                      />
-                      <Scatter
-                        name={t("aiForecast")}
-                        data={forecastData.filter((d) => d.forecast !== null)}
-                        fill="#10B981"
-                        dataKey="forecast"
-                      />
-                    </ScatterChart>
-                  )}
-                  {chartType === "Composed" && (
-                    <ComposedChart data={forecastData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
-                      />
-                      <XAxis
-                        dataKey="day"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis
-                        domain={["dataMin - 5", "dataMax + 5"]}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        tickFormatter={(val) => formatPrice(val, currency)}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "8px",
-                          border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                          backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                          backdropFilter: "blur(10px)",
-                          color: darkMode ? "white" : "black",
-                        }}
-                      />
-                      <Legend />
-                      <Bar
-                        dataKey="historical"
-                        fill="#60A5FA"
-                        name={t("historicalData")}
-                        fillOpacity={0.3}
-                        radius={[8, 8, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="forecast"
-                        fill="#10B981"
-                        name={t("aiForecast")}
-                        fillOpacity={0.3}
-                        radius={[8, 8, 0, 0]}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="historical"
-                        stroke="#60A5FA"
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                        connectNulls={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="forecast"
-                        stroke="#10B981"
-                        strokeWidth={3}
-                        strokeDasharray="5 5"
-                        dot={{ r: 4 }}
-                        connectNulls={false}
-                      />
-                    </ComposedChart>
-                  )}
-                  {(chartType === "Candlestick" || chartType === "Pie" || chartType === "Radar") && (
-                    <LineChart data={forecastData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke={darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
-                      />
-                      <XAxis
-                        dataKey="day"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis
-                        domain={["dataMin - 5", "dataMax + 5"]}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: darkMode ? "#9CA3AF" : "#4B5563" }}
-                        tickFormatter={(val) => formatPrice(val, currency)}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: "8px",
-                          border: `1px solid ${darkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                          backgroundColor: darkMode ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.95)",
-                          backdropFilter: "blur(10px)",
-                          color: darkMode ? "white" : "black",
-                        }}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="historical"
-                        stroke="#60A5FA"
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                        name={t("historicalData")}
-                        connectNulls={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="forecast"
-                        stroke="#10B981"
-                        strokeWidth={3}
-                        strokeDasharray="5 5"
-                        dot={{ r: 4 }}
-                        name={t("aiForecast")}
-                        connectNulls={false}
-                      />
-                    </LineChart>
-                  )}
+                  {renderChart()}
                 </ResponsiveContainer>
               </div>
             </Card>
@@ -512,7 +567,7 @@ export const PredictionScreen = ({
             <div className="lg:col-span-3">
               <Card className="p-6">
                 <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {predictionData.timePeriod === 'week' ? 'Daily' : 'Monthly'} Price Changes
+                  7-Day Price Forecast
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -536,11 +591,6 @@ export const PredictionScreen = ({
                             <td className="py-3 text-sm">
                               <div className="flex items-center">
                                 {item.day}
-                                {!isHistorical && (
-                                  <span className="ml-2 px-1.5 py-0.5 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                                    Forecast
-                                  </span>
-                                )}
                               </div>
                             </td>
                             <td className="py-3 text-sm text-right">

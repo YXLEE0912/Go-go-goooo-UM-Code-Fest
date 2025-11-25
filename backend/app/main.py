@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes.auth import router as auth_router
 from .routes.chat import router as chat_router
+from .routes.predict import router as predict_router
 
 app = FastAPI(title="GoSense API", version="1.0.0")
 
@@ -16,6 +17,7 @@ app.add_middleware(
 
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 app.include_router(chat_router, prefix="/api", tags=["chat"])
+app.include_router(predict_router, prefix="/api", tags=["predict"])
 
 @app.get("/")
 async def root():
