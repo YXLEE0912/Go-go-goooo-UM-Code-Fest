@@ -11,7 +11,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
 // Use the same API base URL as the rest of the app
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "https://go-go-goooo-um-code-fest.onrender.com";
 
 type ReportPeriod = 'daily' | 'weekly' | 'monthly';
 
