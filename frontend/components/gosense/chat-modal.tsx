@@ -100,29 +100,32 @@ What would you like to know?`,
 
   return (
     <>
-      <button
-        onClick={() => setShowChat(!showChat)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full shadow-lg shadow-blue-600/50 flex items-center justify-center hover:scale-110 transition-transform z-50"
-      >
-        <MessageCircle className="w-6 h-6 text-white" />
-      </button>
+      {!showChat && (
+        <button
+          onClick={() => setShowChat(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full shadow-lg shadow-blue-600/50 flex items-center justify-center hover:scale-110 transition-transform z-50"
+        >
+          <MessageCircle className="w-6 h-6 text-white" />
+        </button>
+      )}
 
       <AnimatePresence>
         {showChat && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed bottom-24 right-6 w-96 max-h-[500px] flex flex-col z-50"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="fixed top-0 right-0 h-full w-[600px] flex flex-col z-50 shadow-2xl"
           >
-            <Card className="flex-1 flex flex-col overflow-hidden h-[500px]">
-              <div className="p-4 border-b border-white/10 flex justify-between items-center">
+            <Card className="flex-1 flex flex-col overflow-hidden h-full rounded-none border-r-0 bg-gray-900 border-l border-white/10">
+              <div className="p-4 border-b border-white/10 flex justify-between items-center bg-gray-900/50 backdrop-blur-sm">
                 <h3 className="font-semibold text-white">AI Assistant</h3>
-                <button onClick={() => setShowChat(false)} className="text-gray-400 hover:text-white">
+                <button onClick={() => setShowChat(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white">
                   ×
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-900/95">
                 {messages.map((msg, idx) => (
                   <div key={idx} className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}>
                     {msg.type === "ai" && (

@@ -1,85 +1,119 @@
-# Go go goooo's UM Code Fest 2025 Repository
+# GoSense - Enterprise AI Stock Analysis & Prediction Platform
 
-## Backend Authentication API
+GoSense is a cutting-edge enterprise dashboard designed for intelligent stock market analysis, forecasting, and strategic decision-making. Built for the **UM Code Fest**, it leverages advanced machine learning (SARIMAX) and Generative AI to provide actionable insights for NVIDIA (NVDA) stock.
 
-This project includes a FastAPI backend for user authentication using MongoDB.
+## 🚀 Key Features
 
-### Setup
+*   **📈 AI-Powered Forecasting**: 7-day price prediction using a fine-tuned SARIMAX model.
+*   **🤖 Intelligent Chatbot**: Context-aware AI assistant (powered by Google Gemini) that understands market trends and provides strategic advice.
+*   **📊 Advanced Technical Analysis**: Real-time calculation of key indicators:
+    *   **RSI (Relative Strength Index)**
+    *   **Annualized Volatility**
+    *   **Support & Resistance Levels**
+*   **💡 Enterprise Optimization Strategy**: Integrated function designed for enterprise executives (e.g., CEO) to determine actionable strategic steps and optimize corporate decision-making.
+*   **📰 Market Intelligence**: Real-time news aggregation from Google & Yahoo Finance with sentiment impact analysis.
+*   **🌍 Multi-Language Support**: Fully localized for **English**, **Chinese**, and **Malay**.
+*   **🎨 Modern Enterprise UI**: Responsive design with Dark Mode, built using Next.js, Tailwind CSS, and Framer Motion.
 
-1. Install dependencies:
-   ```
-   cd backend
-   pip install -r requirements.txt
-   ```
+## 🛠️ Tech Stack
 
-2. Run the server:
-   ```
-   python run.py
-   ```
+### Frontend
+*   **Framework**: Next.js 16 (React 19)
+*   **Language**: TypeScript
+*   **Styling**: Tailwind CSS, Framer Motion
+*   **Components**: Radix UI, Lucide React
+*   **Charts**: Recharts
 
-   The API will be available at http://localhost:8000
+### Backend
+*   **Framework**: FastAPI
+*   **Language**: Python 3.10+
+*   **ML/Data Science**: Scikit-learn, Statsmodels (SARIMAX), Pandas, NumPy, Joblib
+*   **AI Integration**: Google Gemini API (`google-generativeai`)
+*   **Data Sources**: Yahoo Finance (`yfinance`), RSS Feeds (`feedparser`)
+*   **Database**: MongoDB
 
-### API Endpoints
+## 📦 Installation & Setup
 
-- `POST /auth/signup` - Register a new user with email and password
-- `POST /auth/login` - Login with email and password, returns JWT token
-- `GET /auth/users/me` - Get current user info (requires authentication)
+### Prerequisites
+*   Node.js (v18+)
+*   Python (v3.10+)
+*   MongoDB (Local or Atlas)
 
-### Example Usage
-
-#### Sign Up
+### 1. Clone the Repository
 ```bash
-curl -X POST "http://localhost:8000/auth/signup" \
-     -H "Content-Type: application/json" \
-     -d '{"email": "user@example.com", "password": "password123"}'
+git clone https://github.com/zheHT/Go-go-goooo-UM-Code-Fest.git
+cd Go-go-goooo-UM-Code-Fest
 ```
 
-#### Login
+### 2. Backend Setup
+Navigate to the backend directory and install dependencies:
 ```bash
-curl -X POST "http://localhost:8000/auth/login" \
-     -H "Content-Type: application/json" \
-     -d '{"email": "user@example.com", "password": "password123"}'
+cd backend
+# Create a virtual environment (optional but recommended)
+python -m venv venv
+# Activate venv:
+# Windows: .\venv\Scripts\activate
+# Mac/Linux: source venv/bin/activate
+
+pip install -r requirements.txt
 ```
 
-Response:
-```json
-{
-  "access_token": "eyJ...",
-  "token_type": "bearer"
-}
+**Configuration**:
+Create a `.env` file in the `backend` directory with the following keys:
+```env
+MONGODB_URL=mongodb://localhost:27017
+DB_NAME=gosense
+SECRET_KEY=your_secret_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+GOOGLE_API_KEY=your_gemini_api_key
 ```
 
-#### Get User Info
+**Run the Backend**:
 ```bash
-curl -X GET "http://localhost:8000/auth/users/me" \
-     -H "Authorization: Bearer <access_token>"
+python run.py
+# The API will start at http://localhost:8000
 ```
 
-## Frontend Integration
+### 3. Frontend Setup
+Navigate to the frontend directory and install dependencies:
+```bash
+cd ../frontend
+npm install
+# or
+pnpm install
+```
 
-The frontend is built with Next.js and connects to the backend API.
+**Run the Frontend**:
+```bash
+npm run dev
+# The application will start at http://localhost:3000
+```
 
-### Running the Frontend
+## 📂 Project Structure
 
-1. Install dependencies:
-   ```
-   cd frontend
-   npm install
-   ```
+```
+GoSense/
+├── backend/                # FastAPI Backend
+│   ├── app/
+│   │   ├── models/         # Database models
+│   │   ├── routes/         # API endpoints (auth, chat, predict, news)
+│   │   ├── utils/          # Helper functions
+│   │   └── main.py         # App entry point
+│   ├── models/             # ML Models (best_model.pkl, scalers)
+│   └── run.py              # Server runner
+├── frontend/               # Next.js Frontend
+│   ├── app/                # App router pages
+│   ├── components/         # React components (gosense/, ui/)
+│   ├── lib/                # Utilities (api, types, translations)
+│   └── public/             # Static assets
+├── ml/                     # Machine Learning resources
+│   └── dataset/            # Training data (NVDA.csv)
+└── chatbot/                # Chatbot specific resources
+```
 
-2. Run the development server:
-   ```
-   npm run dev
-   ```
+## 🤝 Contributors
+*   **Team Go-go-goooo** - UM Code Fest
 
-   The frontend will be available at http://localhost:3000
-
-### Authentication Flow
-
-- The login screen (`components/gosense/login-screen.tsx`) handles both signup and login
-- On successful authentication, the JWT token is stored in localStorage
-- The `onLogin` callback is called to transition to the main app
-
-### API Integration
-
-The frontend uses fetch to communicate with the backend. CORS is configured to allow requests from `http://localhost:3000`.
+## 📄 License
+This project is licensed under the MIT License.

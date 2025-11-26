@@ -66,6 +66,12 @@ export const PredictionScreen = ({
   setShowNotifications
 }: PredictionScreenProps) => {
   const [forecastData, setForecastData] = useState<any[]>([])
+  const [analysis, setAnalysis] = useState<string>("")
+  const [recommendation, setRecommendation] = useState<string>("")
+  const [volatility, setVolatility] = useState<number | null>(null)
+  const [rsi, setRsi] = useState<number | null>(null)
+  const [support, setSupport] = useState<number | null>(null)
+  const [resistance, setResistance] = useState<number | null>(null)
 
   useEffect(() => {
     const loadForecast = async () => {
@@ -90,6 +96,12 @@ export const PredictionScreen = ({
            }))
            
            setForecastData(forecastData)
+           setAnalysis(response.analysis || "")
+           setRecommendation(response.recommendation || "")
+           setVolatility(response.volatility)
+           setRsi(response.rsi)
+           setSupport(response.support_level)
+           setResistance(response.resistance_level)
         } else {
            // Fallback to generated data if API fails
            const generated = generateForecastData([], 'Week').filter(d => d.forecast !== null)
@@ -578,66 +590,219 @@ export const PredictionScreen = ({
                 </ResponsiveContainer>
               </div>
             </Card>
+
+            {/* Optimization Strategy Card */}
+            <Card className={`p-6 ${darkMode ? "bg-gradient-to-br from-white/10 to-white/5" : "bg-white"}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                    {t("optimizationStrategy")}
+                  </h3>
+                  <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"} mt-1`}>
+                    Actionable insights for executive decision-making
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  predictedChange > 0 
+                    ? darkMode ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-800"
+                    : predictedChange < 0
+                    ? darkMode ? "bg-red-900/30 text-red-400" : "bg-red-100 text-red-800"
+                    : darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-800"
+                }`}>
+                  {predictedChange > 0 ? t("buy") : predictedChange < 0 ? t("sell") : t("hold")}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className={`p-4 rounded-lg ${darkMode ? "bg-white/5" : "bg-gray-50"}`}>
+                  <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"} mb-1`}>{t("tradingSignal")}</p>
+                  <p className={`font-semibold ${
+                    predictedChange > 0 ? "text-green-500" : predictedChange < 0 ? "text-red-500" : darkMode ? "text-white" : "text-gray-900"
+                  }`}>
+                    {predictedChange > 2 ? t("strongBuy") : predictedChange > 0 ? t("buy") : predictedChange < -2 ? t("strongSell") : predictedChange < 0 ? t("sell") : t("hold")}
+                  </p>
+                </div>
+                <div className={`p-4 rounded-lg ${darkMode ? "bg-white/5" : "bg-gray-50"}`}>
+                  <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"} mb-1`}>{t("riskLevel")}</p>
+                  <p className={`font-semibold ${
+                    Math.abs(Number(predictedPercent)) > 5 ? "text-red-500" : Math.abs(Number(predictedPercent)) > 2 ? "text-yellow-500" : "text-green-500"
+                  }`}>
+                    {Math.abs(Number(predictedPercent)) > 5 ? t("highRisk") : Math.abs(Number(predictedPercent)) > 2 ? t("mediumRisk") : t("lowRisk")}
+                  </p>
+                </div>
+                <div className={`p-4 rounded-lg ${darkMode ? "bg-white/5" : "bg-gray-50"}`}>
+                  <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"} mb-1`}>{t("confidenceScore")}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: '85%' }}></div>
+                    </div>
+                    <span className={`text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>85%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className={`p-4 rounded-lg border ${darkMode ? "border-white/10 bg-blue-900/20" : "border-blue-100 bg-blue-50"}`}>
+                <div className="flex gap-3 mb-4">
+                  <div className={`mt-1 p-1.5 rounded-full ${darkMode ? "bg-blue-500/20 text-blue-400" : "bg-blue-100 text-blue-600"}`}>
+                    <ArrowUpRight className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className={`text-sm font-medium mb-1 ${darkMode ? "text-blue-100" : "text-blue-900"}`}>
+                      {t("marketAnalysis")}
+                    </h4>
+                    <p className={`text-sm ${darkMode ? "text-blue-200/80" : "text-blue-700/80"}`}>
+                      {analysis || (predictedChange > 0 ? t("strategyDescription") : predictedChange < 0 ? t("strategyDescriptionBearish") : t("strategyDescriptionNeutral"))}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-3">
+                  <div className={`mt-1 p-1.5 rounded-full ${darkMode ? "bg-purple-500/20 text-purple-400" : "bg-purple-100 text-purple-600"}`}>
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className={`text-sm font-medium mb-1 ${darkMode ? "text-purple-100" : "text-purple-900"}`}>
+                      {t("strategicRecommendation")}
+                    </h4>
+                    <p className={`text-sm ${darkMode ? "text-purple-200/80" : "text-purple-700/80"}`}>
+                      {recommendation || t("defaultRecommendation")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+            
+            {/* Technical Indicators Card */}
+            <Card className={`p-6 ${darkMode ? "bg-gradient-to-br from-white/10 to-white/5" : "bg-white"}`}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                  {t("technicalIndicators")}
+                </h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Volatility */}
+                <div className={`p-4 rounded-lg ${darkMode ? "bg-white/5" : "bg-gray-50"}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{t("volatility")}</p>
+                    <div className={`w-2 h-2 rounded-full ${
+                      (volatility || 0) > 0.3 ? "bg-red-500" : (volatility || 0) > 0.15 ? "bg-yellow-500" : "bg-green-500"
+                    }`} />
+                  </div>
+                  <p className={`text-xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                    {volatility ? `${(volatility * 100).toFixed(1)}%` : "N/A"}
+                  </p>
+                  <p className={`text-[10px] mt-1 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                    {t("volatilityDesc")}
+                  </p>
+                </div>
+
+                {/* RSI */}
+                <div className={`p-4 rounded-lg ${darkMode ? "bg-white/5" : "bg-gray-50"}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{t("rsi")}</p>
+                    <div className={`w-2 h-2 rounded-full ${
+                      (rsi || 50) > 70 ? "bg-red-500" : (rsi || 50) < 30 ? "bg-green-500" : "bg-blue-500"
+                    }`} />
+                  </div>
+                  <p className={`text-xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                    {rsi ? rsi.toFixed(1) : "N/A"}
+                  </p>
+                  <p className={`text-[10px] mt-1 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                    {t("rsiDesc")}
+                  </p>
+                </div>
+
+                {/* Support */}
+                <div className={`p-4 rounded-lg ${darkMode ? "bg-white/5" : "bg-gray-50"}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{t("supportLevel")}</p>
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                  </div>
+                  <p className={`text-xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                    {support ? formatPrice(support, currency) : "N/A"}
+                  </p>
+                  <p className={`text-[10px] mt-1 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                    {t("supportDesc")}
+                  </p>
+                </div>
+
+                {/* Resistance */}
+                <div className={`p-4 rounded-lg ${darkMode ? "bg-white/5" : "bg-gray-50"}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>{t("resistanceLevel")}</p>
+                    <div className="w-2 h-2 rounded-full bg-red-500" />
+                  </div>
+                  <p className={`text-xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                    {resistance ? formatPrice(resistance, currency) : "N/A"}
+                  </p>
+                  <p className={`text-[10px] mt-1 ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                    {t("resistanceDesc")}
+                  </p>
+                </div>
+              </div>
+            </Card>
             
             {/* Price Change Table */}
-            <div>
-              <Card className="p-6">
-                <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  7-Day Price Forecast
+            <Card className={`p-6 ${darkMode ? "bg-gradient-to-br from-white/10 to-white/5" : "bg-white"}`}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                  {t("priceChangeTable")}
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className={`text-left text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        <th className="pb-2 font-medium">Date</th>
-                        <th className="pb-2 font-medium text-right">Price</th>
-                        <th className="pb-2 font-medium text-right">Change</th>
-                        <th className="pb-2 font-medium text-right">% Change</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-white/10">
-                      {enhancedData.map((item, index) => {
-                        const price = item.displayPrice ?? 0
-                        const isHistorical = item.isHistorical
-                        const change = item.changePercent || 0
-                        const isPositive = change >= 0
-                        
-                        return (
-                          <tr key={index} className={darkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'}>
-                            <td className="py-3 text-sm">
-                              <div className="flex items-center">
-                                {item.day}
-                              </div>
-                            </td>
-                            <td className="py-3 text-sm text-right">
-                              {formatPrice(price, currency)}
-                            </td>
-                            <td className="py-3 text-sm text-right">
-                              {index > 0 && (
-                                <span className={`${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                                  {isPositive ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 text-sm text-right">
-                              {index > 0 && (
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                  isPositive 
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
-                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                                }`}>
-                                  {isPositive ? '+' : ''}{change.toFixed(2)}%
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </div>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className={`text-left text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                      <th className="pb-2 font-medium">{t("date")}</th>
+                      <th className="pb-2 font-medium text-right">{t("price")}</th>
+                      <th className="pb-2 font-medium text-right">{t("change")}</th>
+                      <th className="pb-2 font-medium text-right">{t("%Change")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-white/10">
+                    {enhancedData.map((item, index) => {
+                      const price = item.displayPrice ?? 0
+                      const isHistorical = item.isHistorical
+                      const change = item.changePercent || 0
+                      const isPositive = change >= 0
+                      
+                      return (
+                        <tr key={index} className={darkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'}>
+                          <td className="py-3 text-sm">
+                            <div className="flex items-center">
+                              {item.day}
+                            </div>
+                          </td>
+                          <td className="py-3 text-sm text-right">
+                            {formatPrice(price, currency)}
+                          </td>
+                          <td className="py-3 text-sm text-right">
+                            {index > 0 && (
+                              <span className={`${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                                {isPositive ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 text-sm text-right">
+                            {index > 0 && (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                isPositive 
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
+                                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                              }`}>
+                                {isPositive ? '+' : ''}{change.toFixed(2)}%
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           </div>
           </motion.div>
         </div>
