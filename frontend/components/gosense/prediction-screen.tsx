@@ -21,6 +21,7 @@ import {
 import { ChevronLeft, ArrowUpRight, ArrowDownRight, Bell, AlertCircle } from "lucide-react"
 import { Card } from "../ui/card"
 import { Button } from "../ui/button"
+import { Skeleton } from "../ui/skeleton"
 import { ChatModal } from "./chat-modal"
 import { NotificationPanel } from "./notification-panel"
 import { generateForecastData } from "../../lib/gosense-data"
@@ -96,9 +97,11 @@ export const PredictionScreen = ({
   const [rsi, setRsi] = useState<number | null>(null)
   const [support, setSupport] = useState<number | null>(null)
   const [resistance, setResistance] = useState<number | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
   useEffect(() => {
     const loadForecast = async () => {
+      setIsLoading(true)
       try {
         const days = 7 // Always show next 7 days prediction
         const response = await auth.predict(days)
@@ -179,6 +182,8 @@ export const PredictionScreen = ({
         setStrategicInsights(null)
         setAnalysis("Connection error.")
         setRecommendation("N/A")
+      } finally {
+        setIsLoading(false)
       }
     }
     
@@ -639,7 +644,55 @@ export const PredictionScreen = ({
         </header>
 
         <div className="flex-1 p-6 space-y-6">
-          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
+          {isLoading ? (
+            <div className="space-y-6">
+              <div className="flex justify-center items-center py-4">
+                <p className={`text-sm font-medium animate-pulse ${darkMode ? "text-blue-400" : "text-blue-600"}`}>
+                  Data is on the way — please wait.
+                </p>
+              </div>
+              <Card className={`p-6 ${darkMode ? "bg-gradient-to-br from-white/10 to-white/5" : "bg-white"}`}>
+                <div className="space-y-4">
+                  <Skeleton className={`h-4 w-32 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                  <Skeleton className={`h-12 w-48 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                  <div className={`grid grid-cols-2 gap-4 pt-4 border-t ${darkMode ? "border-white/10" : "border-gray-200"}`}>
+                    <div className="space-y-2">
+                      <Skeleton className={`h-3 w-20 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                      <Skeleton className={`h-6 w-24 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className={`h-3 w-20 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                      <Skeleton className={`h-6 w-24 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <Skeleton className={`h-6 w-48 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                  <Skeleton className={`h-6 w-24 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                </div>
+                <Skeleton className={`h-80 w-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+              </Card>
+              <Card className={`p-6 ${darkMode ? "bg-gradient-to-br from-white/10 to-white/5" : "bg-white"}`}>
+                <div className="flex justify-between items-center mb-6">
+                  <div className="space-y-2">
+                    <Skeleton className={`h-6 w-48 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                    <Skeleton className={`h-4 w-64 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                  </div>
+                  <Skeleton className={`h-6 w-24 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                </div>
+                <div className="space-y-4">
+                  <Skeleton className={`h-24 w-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Skeleton className={`h-32 w-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                    <Skeleton className={`h-32 w-full ${darkMode ? "bg-gray-700" : "bg-gray-200"}`} />
+                  </div>
+                </div>
+              </Card>
+            </div>
+          ) : (
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
             <Card className={`p-6 ${darkMode ? "bg-gradient-to-br from-white/10 to-white/5" : "bg-white"}`}>
               <div className="flex justify-between items-start mb-6">
                 <div>
@@ -1004,6 +1057,7 @@ export const PredictionScreen = ({
             </div>
           </div>
           </motion.div>
+          )}
         </div>
 
         <ChatModal />
