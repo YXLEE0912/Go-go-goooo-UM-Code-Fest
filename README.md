@@ -13,7 +13,7 @@ Any publicly listed company’s internal teams:
 *   **Corporate Finance & Strategy Departments**
 *   **Institutional Research Teams**
 
-*Note: NVIDIA is used only as a demo; the system is adaptable to multiple companies and industries.*
+*Note: NVIDIA is used only as a demo, the system is adaptable to multiple companies and industries.*
 
 ## ✅ The Solution (What We Solve)
 *   **Simplifies** complex financial analysis and market forecasting.
@@ -38,7 +38,7 @@ Any publicly listed company’s internal teams:
 *   **Context-Aware**: Restricted to company/sector news for explainable, relevant answers.
 *   **R&D Advisor**: Acts as a virtual analyst for investment queries.
 
-### 4. Automated Report Generation (Add-On)
+### 4. Automated Report Generation 
 *   **Customizable Reports**: Auto-generates PDF/PPT briefing books (Daily/Weekly/Monthly).
 *   **Content**: Includes performance attribution, risk metrics, key alerts, and AI-driven insights.
 *   **Value**: Reduces manual reporting effort and ensures consistency for executives & clients.
