@@ -1,3 +1,6 @@
+// API Base URL - change this to match your backend server
+// For local development: "http://localhost:8000"
+// For production: your deployed backend URL
 const API_BASE_URL = "http://localhost:8000"
 
 export const api = {

@@ -10,7 +10,9 @@ import {
 } from '../ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
-type ReportType = 'pdf' | 'excel' | 'word' | 'ppt';
+// Use the same API base URL as the rest of the app
+const API_BASE_URL = "http://localhost:8000";
+
 type ReportPeriod = 'daily' | 'weekly' | 'monthly';
 
 interface ReportGeneratorProps {
@@ -28,7 +30,6 @@ export function ReportGenerator({
 }: ReportGeneratorProps) {
   const [open, setOpen] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedFormat, setSelectedFormat] = useState<ReportType>('pdf');
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod>('daily');
   const [includeCharts, setIncludeCharts] = useState(true);
   const [includeChats, setIncludeChats] = useState(true);
@@ -45,7 +46,7 @@ export function ReportGenerator({
 
     try {
       const reportData = {
-        format: selectedFormat,
+        format: 'pdf',
         period: selectedPeriod,
         includeCharts,
         includeChats,
@@ -54,17 +55,27 @@ export function ReportGenerator({
         predictionData: includePredictions ? predictionData : [],
         chatHistory: includeChats ? chatHistory : [],
         stockChanges: stockChanges || [],
+        generatedAt: new Date().toISOString(), // Required by backend
       };
 
-      const response = await fetch('/api/generate-report', {
+      // Call the backend API directly (not the Next.js API route)
+      const response = await fetch(`${API_BASE_URL}/api/generate-report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reportData),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to generate report');
+        // Try to parse error response (FastAPI returns {detail: "message"})
+        let errorMessage = 'Failed to generate report';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const blob = await response.blob();
@@ -72,7 +83,7 @@ export function ReportGenerator({
 
       // Determine filename dynamically based on selected format
       const contentDisposition = response.headers.get('content-disposition');
-      let filename = `report.${selectedFormat}`;
+      let filename = `report.pdf`;
       if (contentDisposition) {
         const match = contentDisposition.match(/filename="?(.+)"?/);
         if (match) filename = match[1];
@@ -118,20 +129,11 @@ export function ReportGenerator({
 
           <TabsContent value="format" className="space-y-4 pt-4">
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-white">Report Format</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['pdf', 'excel', 'word', 'ppt'] as ReportType[]).map((format) => (
-                    <Button
-                      key={format}
-                      variant={selectedFormat === format ? 'default' : 'outline'}
-                      onClick={() => setSelectedFormat(format)}
-                      className="capitalize"
-                    >
-                      {format.toUpperCase()}
-                    </Button>
-                  ))}
-                </div>
+              <div className="bg-white/10 border border-white/20 rounded-lg p-4 text-white">
+                <p className="text-sm font-medium mb-1">Report format</p>
+                <p className="text-sm text-white/80">
+                  Reports are generated in high-quality PDF format with standardized sections.
+                </p>
               </div>
 
               <div>
