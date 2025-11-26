@@ -125,6 +125,22 @@ export const auth = {
     return api.get("/api/news")
   },
 
+  async getNotifications() {
+    return api.get("/api/notifications")
+  },
+
+  async createNotification(message: string, type: string = "info") {
+    return api.post("/api/notifications", { message, type })
+  },
+
+  async markNotificationRead(id: string) {
+    return api.put(`/api/notifications/${id}/read`, {})
+  },
+
+  async markAllNotificationsRead() {
+    return api.put("/api/notifications/read-all", {})
+  },
+
   logout() {
     localStorage.removeItem("token")
   },

@@ -138,6 +138,25 @@ export const PredictionScreen = ({
            setRsi(response.rsi)
            setSupport(response.support_level)
            setResistance(response.resistance_level)
+
+           // Add critical alerts to notification panel
+           alertsFromApi.forEach(alert => {
+             if (alert.signal === "critical alert") {
+               const message = `Critical Forecast Alert: Price expected to drop to ${formatPrice(alert.price, currency)} (Day ${alert.day})`
+               
+               // Check if we already have this notification locally to avoid spamming
+               setNotifications(prev => {
+                 if (prev.some(n => n.message === message)) return prev
+                 
+                 return [{
+                   id: Date.now().toString() + Math.random(),
+                   message: message,
+                   time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                   read: false,
+                 }, ...prev]
+               })
+             }
+           })
         } else {
            // Fallback to generated data if API fails
            const generated = generateForecastData([], 'Week').filter(d => d.forecast !== null)

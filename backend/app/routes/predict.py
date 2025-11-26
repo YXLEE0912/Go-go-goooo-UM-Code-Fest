@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 import joblib
 import os
@@ -9,10 +9,11 @@ from datetime import datetime, timedelta
 import google.generativeai as genai
 import json
 import re
-
-import google.generativeai as genai
-import json
-import re
+from ..routes.auth import get_current_user
+from ..models.user import User
+from ..utils.email import send_price_alert_email
+from ..database import get_database
+from pymongo.database import Database
 
 router = APIRouter()
 
@@ -206,7 +207,7 @@ async def get_history(days: int = 30, period: str = "Week", month_index: int = 0
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/predict", response_model=PredictionResponse)
-async def predict(request: PredictionRequest):
+async def predict(request: PredictionRequest, current_user: User = Depends(get_current_user), db: Database = Depends(get_database)):
     if not model:
         raise HTTPException(status_code=500, detail="Model not loaded")
     
@@ -269,10 +270,38 @@ async def predict(request: PredictionRequest):
         # === ALERT LOGIC ===
         alerts = []
         baseline = historical[-1]  # last historical price
+        email_sent = False # Flag to prevent spamming multiple emails for one forecast
+
         for i, val in enumerate(forecast_values, start=1):
             pct_change = ((val - baseline) / baseline) * 100
             if pct_change <= -7:
                 signal = "critical alert"
+                # Trigger email if user has price alerts enabled and we haven't sent one yet
+                if current_user.settings.priceAlerts and not email_sent:
+                    threshold_price = baseline * 0.93 # 7% drop threshold
+                    
+                    # Send Email
+                    await send_price_alert_email(
+                        current_user.email, 
+                        "NVIDIA (Forecast)", 
+                        val, 
+                        threshold_price
+                    )
+                    
+                    # Save to Database
+                    try:
+                        notification_doc = {
+                            "user_id": current_user.id,
+                            "message": f"Critical Forecast Alert: Price expected to drop to ${val:.2f} (Day {i})",
+                            "type": "critical",
+                            "read": False,
+                            "timestamp": datetime.now()
+                        }
+                        db["notifications"].insert_one(notification_doc)
+                    except Exception as e:
+                        print(f"Error saving notification: {e}")
+
+                    email_sent = True
             elif pct_change <= -5:
                 signal = "normal alert"
             else:

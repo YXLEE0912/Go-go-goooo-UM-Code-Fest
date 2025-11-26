@@ -10,6 +10,7 @@ from .routes.predict import router as predict_router
 from .routes.news import router as news_router
 from .routes.market import router as market_router
 from .routes.reports import router as reports_router
+from .routes.notifications import router as notifications_router
 
 app = FastAPI(title="GoSense API", version="1.0.0")
 
@@ -28,6 +29,7 @@ app.include_router(predict_router, prefix="/api", tags=["predict"])
 app.include_router(news_router, prefix="/api", tags=["news"])
 app.include_router(market_router, prefix="/api", tags=["market"])
 app.include_router(reports_router, prefix="/api", tags=["reports"])
+app.include_router(notifications_router, prefix="/api", tags=["notifications"])
 
 @app.get("/")
 async def root():

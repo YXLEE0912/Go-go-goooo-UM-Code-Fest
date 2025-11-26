@@ -116,19 +116,26 @@ export const DashboardScreen = ({
       const percentChange = ((lastPrice - firstPrice) / firstPrice) * 100
 
       if (percentChange < -5) {
-        const newNotification = {
-          id: Date.now().toString(),
-          message: `Risk Alert: Significant drop of ${Math.abs(percentChange).toFixed(2)}% detected in the last ${timeRange}.`,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          read: false,
-        }
-        setNotifications(prev => {
-          if (!prev.length || prev[0].message !== newNotification.message) {
+        const message = `Risk Alert: Significant drop of ${Math.abs(percentChange).toFixed(2)}% detected in the last ${timeRange}.`
+        
+        // Check if we already have this notification locally to avoid spamming API
+        const alreadyExists = notifications.some(n => n.message === message)
+        
+        if (!alreadyExists) {
+          // Persist to backend
+          auth.createNotification(message, "warning").catch(console.error)
+          
+          const newNotification = {
+            id: Date.now().toString(),
+            message: message,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            read: false,
+          }
+          setNotifications(prev => {
             if (soundEnabled) playNotificationSound()
             return [newNotification, ...prev.slice(0, 9)]
-          }
-          return prev
-        })
+          })
+        }
       }
     }
   }, [historicalData, soundEnabled, timeRange])

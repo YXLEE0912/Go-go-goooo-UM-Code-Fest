@@ -62,7 +62,11 @@ export const NewsScreen = ({
             animate={{ opacity: 1, scale: 1 }}
             className="space-y-4"
           >
-            <NewsSection darkMode={darkMode} language={language} />
+            <NewsSection 
+              darkMode={darkMode} 
+              language={language} 
+              setNotifications={setNotifications}
+            />
           </motion.div>
         </div>
       </div>

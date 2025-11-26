@@ -7,6 +7,7 @@ import { PredictionScreen } from "./prediction-screen"
 import { SettingsScreen } from "./settings-screen"
 import { NewsScreen } from "./news-screen"
 import { Sidebar } from "./sidebar"
+import { auth } from "../../lib/api"
 import { ChatModal } from "./chat-modal"
 import type { Language } from "../../lib/gosense-translations"
 import type { PredictionData, Notification } from "../../lib/gosense-types"
@@ -25,6 +26,28 @@ export default function GoSenseApp() {
   useEffect(() => {
     document.body.className = darkMode ? "dark" : "light"
   }, [darkMode])
+
+  // Fetch notifications on mount and when screen changes to dashboard
+  useEffect(() => {
+    if (currentScreen !== "login") {
+      const fetchNotifications = async () => {
+        try {
+          const data = await auth.getNotifications()
+          // Map backend notification format to frontend format
+          const formatted: Notification[] = data.map((n: any) => ({
+            id: n.id,
+            message: n.message,
+            time: new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            read: n.read
+          }))
+          setNotifications(formatted)
+        } catch (error) {
+          console.error("Failed to fetch notifications:", error)
+        }
+      }
+      fetchNotifications()
+    }
+  }, [currentScreen])
 
   const handleNavigate = (screen: string, data?: any) => {
     if (screen === "prediction") {
