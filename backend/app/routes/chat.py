@@ -9,7 +9,7 @@ import google.generativeai as genai
 import joblib
 import numpy as np
 import statsmodels.api as sm
-from ..utils.news import fetch_all_news
+from ..utils.news import fetch_all_news, fetch_relevant_news
 from ..routes.auth import get_current_user
 from ..models.user import User, ChatMessage, ChatSession
 from ..database import get_database
@@ -112,8 +112,8 @@ async def chat(
         
         model = get_gemini_client()
         
-        # Fetch news context
-        news = await fetch_all_news()
+        # Fetch relevant news context based on user query
+        news = await fetch_relevant_news(request.message)
         
         context_text = "No recent news available."
         if news:
