@@ -33,6 +33,7 @@ export const translations: Record<Language, Record<string, string>> = {
     historicalVsForecast: "Historical vs AI Forecast",
     historicalData: "Historical Data",
     aiForecast: "AI Forecast",
+    activeAlerts: "Active Alerts",
 
     // News Screen
     marketNews: "Market News",
@@ -53,23 +54,31 @@ export const translations: Record<Language, Record<string, string>> = {
     negative: "Negative",
     neutral: "Neutral",
 
+    // Resource Allocation
+    resourceAllocation: "Resource Allocation",
+    maximizeRd: "Maximize R&D",
+    increaseCapacity: "Increase Capacity",
+    costControl: "Cost Control",
+    efficiencyFocus: "Efficiency Focus",
+    maintainLevels: "Maintain Levels",
+
     // Optimization Strategy
     optimizationStrategy: "Enterprise Optimization Strategy",
-    tradingSignal: "Trading Signal",
-    riskLevel: "Risk Level",
+    strategicFocus: "Strategic Focus",
+    riskLevel: "Operational Risk",
     suggestedAction: "Suggested Action",
-    confidenceScore: "Confidence Score",
-    buy: "Buy",
-    sell: "Sell",
-    hold: "Hold",
-    strongBuy: "Strong Buy",
-    strongSell: "Strong Sell",
+    confidenceScore: "Model Confidence",
+    growth: "Growth Focus",
+    optimization: "Cost Optimization",
+    stability: "Stability Maintenance",
+    aggressiveGrowth: "Aggressive Expansion",
+    defensiveMeasures: "Defensive Restructuring",
     highRisk: "High Risk",
     mediumRisk: "Medium Risk",
     lowRisk: "Low Risk",
-    strategyDescription: "Based on the AI forecast, the stock shows a positive trend. Consider accumulating positions on dips.",
-    strategyDescriptionBearish: "The AI predicts a downward trend. Consider reducing exposure or setting stop-losses.",
-    strategyDescriptionNeutral: "The market shows consolidation. Hold current positions and wait for a clearer signal.",
+    strategyDescription: "Positive market sentiment detected. Recommended to accelerate R&D initiatives and expand supply chain capacity to meet projected demand.",
+    strategyDescriptionBearish: "Market volatility anticipated. Recommended to streamline operations, optimize inventory levels, and focus on cost-efficiency measures.",
+    strategyDescriptionNeutral: "Market stability projected. Recommended to maintain current operational cadence while monitoring for emerging opportunities.",
     marketAnalysis: "Market Analysis",
     strategicRecommendation: "Executive Strategic Recommendation",
     defaultRecommendation: "Monitor market conditions closely and adjust portfolio allocation based on risk tolerance.",
@@ -154,6 +163,7 @@ export const translations: Record<Language, Record<string, string>> = {
     historicalVsForecast: "历史数据 vs AI预测",
     historicalData: "历史数据",
     aiForecast: "AI预测",
+    activeAlerts: "活跃警报",
 
     // News Screen
     marketNews: "市场新闻",
@@ -173,6 +183,14 @@ export const translations: Record<Language, Record<string, string>> = {
     positive: "正面",
     negative: "负面",
     neutral: "中性",
+
+    // Resource Allocation
+    resourceAllocation: "资源分配",
+    maximizeRd: "最大化研发",
+    increaseCapacity: "增加产能",
+    costControl: "成本控制",
+    efficiencyFocus: "注重效率",
+    maintainLevels: "维持现状",
 
     // Optimization Strategy
     optimizationStrategy: "企业优化策略",
@@ -275,6 +293,7 @@ export const translations: Record<Language, Record<string, string>> = {
     historicalVsForecast: "Sejarah vs Ramalan AI",
     historicalData: "Data Sejarah",
     aiForecast: "Ramalan AI",
+    activeAlerts: "Amaran Aktif",
 
     // News Screen
     marketNews: "Berita Pasaran",
@@ -294,6 +313,14 @@ export const translations: Record<Language, Record<string, string>> = {
     positive: "Positif",
     negative: "Negatif",
     neutral: "Neutral",
+
+    // Resource Allocation
+    resourceAllocation: "Peruntukan Sumber",
+    maximizeRd: "Maksimumkan R&D",
+    increaseCapacity: "Tingkatkan Kapasiti",
+    costControl: "Kawalan Kos",
+    efficiencyFocus: "Fokus Kecekapan",
+    maintainLevels: "Kekalkan Tahap",
 
     // Optimization Strategy
     optimizationStrategy: "Strategi Pengoptimuman Perusahaan",

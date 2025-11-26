@@ -2,12 +2,103 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import joblib
 import os
-from typing import List
+from typing import List, Optional
 import statsmodels.api as sm
 import numpy as np
 from datetime import datetime, timedelta
+import google.generativeai as genai
+import json
+import re
+
+import google.generativeai as genai
+import json
+import re
 
 router = APIRouter()
+
+class StrategicInsights(BaseModel):
+    allocation: dict
+    capacity_planning: str
+    risk_mitigation: str
+    scenarios: dict
+
+class PredictionResponse(BaseModel):
+    historical: List[float]
+    forecast: List[float]
+    analysis: str
+    recommendation: str
+    volatility: float
+    rsi: float
+    support_level: float
+    resistance_level: float
+    alerts: List[dict]
+    strategic_insights: Optional[StrategicInsights] = None
+
+# Initialize Gemini
+def get_gemini_analysis(forecast_change: float, volatility: float, rsi: float, recommendation: str) -> dict:
+    api_key = os.getenv("GOOGLE_API_KEY")
+    
+    if not api_key:
+        return {"analysis": "API Key missing for analysis.", "insights": None}
+    
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        prompt = f"""
+        You are the Chief Strategy Officer for NVIDIA.
+        Based on the following AI forecast metrics, provide a strategic internal report in JSON format.
+        
+        Metrics:
+        - 7-Day Price Forecast Change: {forecast_change:.2f}%
+        - Annualized Volatility: {volatility:.2f}
+        - RSI (14-day): {rsi:.2f}
+        - Strategic Recommendation: {recommendation}
+        
+        Return ONLY a raw JSON object (no markdown formatting) with the following structure:
+        {{
+            "analysis": "A concise 2-sentence executive summary of the market situation.",
+            "insights": {{
+                "allocation": {{
+                    "AI R&D": <integer percentage>,
+                    "Supply Chain": <integer percentage>,
+                    "Data Center": <integer percentage>,
+                    "Partnerships": <integer percentage>
+                }},
+                "capacity_planning": "Specific actionable advice on manufacturing/wafer capacity (e.g., 'Increase H200 output by 15%').",
+                "risk_mitigation": "Specific risk advice based on volatility (e.g., 'If volatility > 40%, hedge inventory').",
+                "scenarios": {{
+                    "Scenario A (Moderate)": "Strategic focus for moderate growth.",
+                    "Scenario B (High Growth)": "Strategic focus for high growth/demand spike."
+                }}
+            }}
+        }}
+        Ensure allocation percentages sum to 100.
+        """
+        
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        print(f"Gemini Raw Response: {text}") # Debug logging
+
+        # Robust JSON extraction
+        try:
+            # Find the first '{' and the last '}'
+            start_idx = text.find('{')
+            end_idx = text.rfind('}')
+            
+            if start_idx != -1 and end_idx != -1:
+                json_str = text[start_idx : end_idx + 1]
+                return json.loads(json_str)
+            else:
+                print("No JSON object found in response")
+                return {"analysis": "Analysis format error.", "insights": None}
+        except json.JSONDecodeError as e:
+            print(f"JSON Decode Error: {e}")
+            return {"analysis": "Analysis parsing error.", "insights": None}
+            
+    except Exception as e:
+        print(f"Gemini analysis error: {e}")
+        return {"analysis": "Analysis unavailable due to service error.", "insights": None}
 
 # Load model
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "../../models/best_model.pkl")
@@ -37,16 +128,6 @@ except Exception as e:
 
 class PredictionRequest(BaseModel):
     days: int = 7
-
-class PredictionResponse(BaseModel):
-    historical: List[float]
-    forecast: List[float]
-    analysis: str
-    recommendation: str
-    volatility: float
-    rsi: float
-    support_level: float
-    resistance_level: float
 
 # Assume the dataset ends at the beginning of 2025
 DATA_END_DATE = datetime(2025, 1, 1)
@@ -203,11 +284,89 @@ async def predict(request: PredictionRequest):
                 "signal": signal
             })
 
+        # === TECHNICAL ANALYSIS ===
+        # Convert historical to numpy array for calculations
+        prices = np.array(historical)
+        
+        # 1. Volatility (Annualized)
+        # Calculate daily returns
+        if len(prices) > 1:
+            returns = np.diff(prices) / prices[:-1]
+            # Std dev of returns * sqrt(252 trading days)
+            volatility = np.std(returns) * np.sqrt(252)
+        else:
+            volatility = 0.0
+        
+        # 2. RSI (14-day)
+        if len(prices) > 14:
+            deltas = np.diff(prices)
+            seed = deltas[:14+1]
+            up = seed[seed >= 0].sum()/14
+            down = -seed[seed < 0].sum()/14
+            if down == 0:
+                rsi = 100.0
+            else:
+                rs = up/down
+                rsi = 100. - 100./(1. + rs)
+            
+            # Calculate for the rest
+            for i in range(14, len(prices)-1):
+                delta = deltas[i]
+                if delta > 0:
+                    upval = delta
+                    downval = 0.
+                else:
+                    upval = 0.
+                    downval = -delta
+                
+                up = (up*(13) + upval)/14
+                down = (down*(13) + downval)/14
+                if down == 0:
+                    rsi = 100.0
+                else:
+                    rs = up/down
+                    rsi = 100. - 100./(1. + rs)
+        else:
+            rsi = 50.0 # Default neutral
+            
+        # 3. Support & Resistance (Simple: Min/Max of last 30 days)
+        support_level = np.min(prices) if len(prices) > 0 else 0.0
+        resistance_level = np.max(prices) if len(prices) > 0 else 0.0
+
+        # === STRATEGIC ANALYSIS ===
+        # Calculate predicted change
+        start_price = forecast_values[0]
+        end_price = forecast_values[-1]
+        pct_change_forecast = ((end_price - start_price) / start_price) * 100
+        
+        if pct_change_forecast > 2.0:
+            recommendation = "Aggressive Expansion"
+        elif pct_change_forecast > 0.5:
+            recommendation = "Growth Focus"
+        elif pct_change_forecast < -2.0:
+            recommendation = "Defensive Restructuring"
+        elif pct_change_forecast < -0.5:
+            recommendation = "Cost Optimization"
+        else:
+            recommendation = "Stability Maintenance"
+            
+        # Generate AI analysis using Gemini
+        gemini_result = get_gemini_analysis(pct_change_forecast, float(volatility), float(rsi), recommendation)
+        analysis = gemini_result.get("analysis", "Analysis unavailable.")
+        insights = gemini_result.get("insights")
+
         # Return combined JSON
         return {
             "historical": historical,
             "forecast": forecast_values,
-            "alerts": alerts
+            "analysis": analysis,
+            "recommendation": recommendation,
+            "volatility": float(volatility),
+            "rsi": float(rsi),
+            "support_level": float(support_level),
+            "resistance_level": float(resistance_level),
+            "alerts": alerts,
+            "strategic_insights": insights
         }
 
     except Exception as e:

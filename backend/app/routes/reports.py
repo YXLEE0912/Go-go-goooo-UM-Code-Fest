@@ -172,8 +172,8 @@ async def get_test_data():
             {"date": "2024-01-08", "prediction": 119, "confidence": 0.82},
         ],
         "chatHistory": [
-            {"question": "What is the current trend?", "answer": "The market shows upward momentum with strong buying pressure."},
-            {"question": "Any predictions for next week?", "answer": "Expected to continue bullish trend with 85% confidence."},
+            {"question": "What is the current trend?", "answer": "The market shows upward momentum with strong growth indicators."},
+            {"question": "Any predictions for next week?", "answer": "Expected to continue positive expansion trend with 85% confidence."},
         ],
         "stockChanges": [
             {"date": "2024-01-01", "change": 2.5},

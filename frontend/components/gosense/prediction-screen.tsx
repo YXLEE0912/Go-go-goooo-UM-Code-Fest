@@ -18,7 +18,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts"
-import { ChevronLeft, ArrowUpRight, ArrowDownRight, Bell } from "lucide-react"
+import { ChevronLeft, ArrowUpRight, ArrowDownRight, Bell, AlertCircle } from "lucide-react"
 import { Card } from "../ui/card"
 import { Button } from "../ui/button"
 import { ChatModal } from "./chat-modal"
@@ -91,6 +91,7 @@ export const PredictionScreen = ({
   }
   const [analysis, setAnalysis] = useState<string>("")
   const [recommendation, setRecommendation] = useState<string>("")
+  const [strategicInsights, setStrategicInsights] = useState<any>(null)
   const [volatility, setVolatility] = useState<number | null>(null)
   const [rsi, setRsi] = useState<number | null>(null)
   const [support, setSupport] = useState<number | null>(null)
@@ -129,6 +130,7 @@ export const PredictionScreen = ({
            setForecastData(forecastData)
            setAnalysis(response.analysis || "")
            setRecommendation(response.recommendation || "")
+           setStrategicInsights(response.strategic_insights || null)
            setVolatility(response.volatility)
            setRsi(response.rsi)
            setSupport(response.support_level)
@@ -150,6 +152,10 @@ export const PredictionScreen = ({
            })
            setAlerts(generatedWithAlerts.map(item => item.alert))
            setForecastData(generatedWithAlerts)
+           
+           setStrategicInsights(null)
+           setAnalysis("Market data unavailable.")
+           setRecommendation("N/A")
         }
       } catch (e) {
         console.error("Prediction error:", e)
@@ -169,6 +175,10 @@ export const PredictionScreen = ({
         })
         setAlerts(generatedWithAlerts.map(item => item.alert))
         setForecastData(generatedWithAlerts)
+        
+        setStrategicInsights(null)
+        setAnalysis("Connection error.")
+        setRecommendation("N/A")
       }
     }
     
@@ -691,6 +701,51 @@ export const PredictionScreen = ({
               </div>
             </Card>
 
+            {/* Active Alerts Section */}
+            {alerts.some(a => a.signal !== "no alert") && (
+              <Card className={`p-6 border-l-4 ${
+                overallSignal === "critical alert" ? "border-l-red-500" : "border-l-yellow-500"
+              } ${darkMode ? "bg-gradient-to-br from-white/10 to-white/5" : "bg-white"}`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`p-2 rounded-full ${
+                    overallSignal === "critical alert" 
+                      ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" 
+                      : "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400"
+                  }`}>
+                    <Bell className="w-5 h-5" />
+                  </div>
+                  <h3 className={`text-lg font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                    {t("activeAlerts")}
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  {alerts.filter(a => a.signal !== "no alert").map((alert, idx) => (
+                    <div key={idx} className={`flex items-center justify-between p-3 rounded-lg ${
+                      alert.signal === "critical alert"
+                        ? "bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30"
+                        : "bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30"
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-sm font-medium ${
+                          alert.signal === "critical alert" 
+                            ? "text-red-800 dark:text-red-200" 
+                            : "text-yellow-800 dark:text-yellow-200"
+                        }`}>
+                          {alert.signal === "critical alert" ? "Critical" : "Warning"}
+                        </span>
+                        <span className={`text-sm ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+                          Day {alert.day}: {alert.pctChange > 0 ? "Surge" : "Drop"} of {Math.abs(alert.pctChange)}% expected
+                        </span>
+                      </div>
+                      <span className={`text-sm font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
+                        {formatPrice(alert.price, currency)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
             {/* Optimization Strategy Card */}
             <Card className={`p-6 ${darkMode ? "bg-gradient-to-br from-white/10 to-white/5" : "bg-white"}`}>
               <div className="flex items-center justify-between mb-4">
@@ -709,53 +764,91 @@ export const PredictionScreen = ({
                     ? darkMode ? "bg-red-900/30 text-red-400" : "bg-red-100 text-red-800"
                     : darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-800"
                 }`}>
-                  {predictedChange > 0 ? t("buy") : predictedChange < 0 ? t("sell") : t("hold")}
+                  {predictedChange > 0 ? t("growth") : predictedChange < 0 ? t("optimization") : t("stability")}
                 </span>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className={`p-4 rounded-lg ${darkMode ? "bg-white/5" : "bg-gray-50"}`}>
-                  <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"} mb-1`}>{t("tradingSignal")}</p>
-                  <p className={`font-semibold ${
-                    predictedChange > 0 ? "text-green-500" : predictedChange < 0 ? "text-red-500" : darkMode ? "text-white" : "text-gray-900"
-                  }`}>
-                    {predictedChange > 2 ? t("strongBuy") : predictedChange > 0 ? t("buy") : predictedChange < -2 ? t("strongSell") : predictedChange < 0 ? t("sell") : t("hold")}
-                  </p>
-                </div>
-                <div className={`p-4 rounded-lg ${darkMode ? "bg-white/5" : "bg-gray-50"}`}>
-                  <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"} mb-1`}>{t("riskLevel")}</p>
-                  <p className={`font-semibold ${
-                    Math.abs(Number(predictedPercent)) > 5 ? "text-red-500" : Math.abs(Number(predictedPercent)) > 2 ? "text-yellow-500" : "text-green-500"
-                  }`}>
-                    {Math.abs(Number(predictedPercent)) > 5 ? t("highRisk") : Math.abs(Number(predictedPercent)) > 2 ? t("mediumRisk") : t("lowRisk")}
-                  </p>
-                </div>
-                <div className={`p-4 rounded-lg ${darkMode ? "bg-white/5" : "bg-gray-50"}`}>
-                  <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"} mb-1`}>{t("confidenceScore")}</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 rounded-full" style={{ width: '85%' }}></div>
-                    </div>
-                    <span className={`text-sm font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>85%</span>
-                  </div>
-                </div>
-              </div>
 
-              <div className={`p-4 rounded-lg border ${darkMode ? "border-white/10 bg-blue-900/20" : "border-blue-100 bg-blue-50"}`}>
-                <div className="flex gap-3 mb-4">
-                  <div className={`mt-1 p-1.5 rounded-full ${darkMode ? "bg-blue-500/20 text-blue-400" : "bg-blue-100 text-blue-600"}`}>
-                    <ArrowUpRight className="w-4 h-4" />
+              {/* Error Message if Insights are missing */}
+              {!strategicInsights && (
+                  <div className={`mb-6 p-4 rounded-lg border border-dashed ${darkMode ? "border-red-500/30 bg-red-900/10" : "border-red-200 bg-red-50"}`}>
+                    <div className="flex items-center gap-3">
+                        <AlertCircle className={`w-5 h-5 ${darkMode ? "text-red-400" : "text-red-600"}`} />
+                        <p className={`text-sm ${darkMode ? "text-red-200" : "text-red-800"}`}>
+                            Unable to load detailed strategic insights. The AI model service may be unavailable.
+                        </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className={`text-sm font-medium mb-1 ${darkMode ? "text-blue-100" : "text-blue-900"}`}>
-                      {t("marketAnalysis")}
+              )}
+              
+              {/* Strategic Resource Allocation */}
+              {strategicInsights?.allocation && (
+                <div className="mb-6">
+                  <h4 className={`text-sm font-medium mb-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    1️⃣ Resource Allocation Optimization
+                  </h4>
+                  <div className="space-y-3">
+                    {Object.entries(strategicInsights.allocation).map(([key, value]: [string, any]) => (
+                      <div key={key}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className={darkMode ? "text-gray-400" : "text-gray-600"}>{key}</span>
+                          <span className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>{value}%</span>
+                        </div>
+                        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-blue-500 rounded-full transition-all duration-500" 
+                            style={{ width: `${value}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Capacity Planning */}
+                {strategicInsights?.capacity_planning && (
+                  <div className={`p-4 rounded-lg border ${darkMode ? "border-blue-500/30 bg-blue-900/10" : "border-blue-200 bg-blue-50"}`}>
+                    <h4 className={`text-sm font-medium mb-2 ${darkMode ? "text-blue-200" : "text-blue-800"}`}>
+                      2️⃣ Capacity Planning Optimization
                     </h4>
-                    <p className={`text-sm ${darkMode ? "text-blue-200/80" : "text-blue-700/80"}`}>
-                      {analysis || (predictedChange > 0 ? t("strategyDescription") : predictedChange < 0 ? t("strategyDescriptionBearish") : t("strategyDescriptionNeutral"))}
+                    <p className={`text-sm ${darkMode ? "text-blue-100/80" : "text-blue-700/80"}`}>
+                      {strategicInsights.capacity_planning}
                     </p>
                   </div>
+                )}
+
+                {/* Risk Mitigation */}
+                {strategicInsights?.risk_mitigation && (
+                  <div className={`p-4 rounded-lg border ${darkMode ? "border-yellow-500/30 bg-yellow-900/10" : "border-yellow-200 bg-yellow-50"}`}>
+                    <h4 className={`text-sm font-medium mb-2 ${darkMode ? "text-yellow-200" : "text-yellow-800"}`}>
+                      3️⃣ Risk Mitigation Optimization
+                    </h4>
+                    <p className={`text-sm ${darkMode ? "text-yellow-100/80" : "text-yellow-700/80"}`}>
+                      {strategicInsights.risk_mitigation}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Scenario Comparison */}
+              {strategicInsights?.scenarios && (
+                <div className="mb-6">
+                  <h4 className={`text-sm font-medium mb-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                    4️⃣ Operational Scenario Comparison
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Object.entries(strategicInsights.scenarios).map(([scenario, detail]: [string, any]) => (
+                      <div key={scenario} className={`p-3 rounded border ${darkMode ? "border-white/10 bg-white/5" : "border-gray-200 bg-gray-50"}`}>
+                        <p className={`text-xs font-bold mb-1 ${darkMode ? "text-white" : "text-gray-900"}`}>{scenario}</p>
+                        <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-600"}`}>{detail}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                
+              )}
+
+              <div className={`p-4 rounded-lg border ${darkMode ? "border-white/10 bg-purple-900/20" : "border-purple-100 bg-purple-50"}`}>
                 <div className="flex gap-3">
                   <div className={`mt-1 p-1.5 rounded-full ${darkMode ? "bg-purple-500/20 text-purple-400" : "bg-purple-100 text-purple-600"}`}>
                     <Bell className="w-4 h-4" />
@@ -766,6 +859,9 @@ export const PredictionScreen = ({
                     </h4>
                     <p className={`text-sm ${darkMode ? "text-purple-200/80" : "text-purple-700/80"}`}>
                       {recommendation || t("defaultRecommendation")}
+                    </p>
+                    <p className={`text-xs mt-2 italic ${darkMode ? "text-purple-300/60" : "text-purple-600/60"}`}>
+                      {analysis}
                     </p>
                   </div>
                 </div>
@@ -855,8 +951,8 @@ export const PredictionScreen = ({
                       <tr className={`text-left text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         <th className="pb-2 font-medium">Date</th>
                         <th className="pb-2 font-medium text-right">Price</th>
-                        <th className="pb-2 font-medium text-right">Change</th>
-                        <th className="pb-2 font-medium text-right">% Change</th>
+                        <th className="pb-2 font-medium text-right">Change %</th>
+                        <th className="pb-2 font-medium text-right">Alert</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-white/10">
@@ -884,13 +980,17 @@ export const PredictionScreen = ({
                               )}
                             </td>
                             <td className="py-3 text-sm text-right">
-                              {index > 0 && (
+                              {item.alertSignal !== "no alert" ? (
                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                  isPositive 
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
-                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                  item.alertSignal === "critical alert"
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
+                                    : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200"
                                 }`}>
-                                  {isPositive ? '+' : ''}{change.toFixed(2)}%
+                                  {item.alertSignal === "critical alert" ? "Critical" : "Warning"}
+                                </span>
+                              ) : (
+                                <span className={`text-xs ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                                  None
                                 </span>
                               )}
                             </td>
