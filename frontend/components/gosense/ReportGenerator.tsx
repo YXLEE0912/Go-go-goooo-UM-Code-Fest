@@ -10,6 +10,9 @@ import {
 } from '../ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
+// Use the same API base URL as the rest of the app
+const API_BASE_URL = "http://localhost:8000";
+
 type ReportType = 'pdf' | 'excel' | 'word' | 'ppt';
 type ReportPeriod = 'daily' | 'weekly' | 'monthly';
 
@@ -54,17 +57,27 @@ export function ReportGenerator({
         predictionData: includePredictions ? predictionData : [],
         chatHistory: includeChats ? chatHistory : [],
         stockChanges: stockChanges || [],
+        generatedAt: new Date().toISOString(), // Required by backend
       };
 
-      const response = await fetch('/api/generate-report', {
+      // Call the backend API directly (not the Next.js API route)
+      const response = await fetch(`${API_BASE_URL}/api/generate-report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reportData),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to generate report');
+        // Try to parse error response (FastAPI returns {detail: "message"})
+        let errorMessage = 'Failed to generate report';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const blob = await response.blob();

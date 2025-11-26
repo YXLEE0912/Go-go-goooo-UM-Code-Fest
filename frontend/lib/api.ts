@@ -1,4 +1,7 @@
-const API_BASE_URL = "https://shiny-fortnight-pjp6x9q656962xqp-8000.app.github.dev"
+// API Base URL - change this to match your backend server
+// For local development: "http://localhost:8000"
+// For production: your deployed backend URL
+const API_BASE_URL = "http://localhost:8000"
 
 export const api = {
   async request(endpoint: string, options: RequestInit = {}) {
