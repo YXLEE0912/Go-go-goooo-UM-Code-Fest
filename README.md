@@ -97,6 +97,23 @@ Any publicly listed company’s internal teams:
 *   **Data Sources**: Yahoo Finance (`yfinance`), RSS Feeds (`feedparser`)
 *   **Database**: MongoDB
 
+### Machine Learning
+*   **Dataset / Data source acquisition**: yfinance, [NVDA dataset from Kaggle](https://www.google.com/url?q=https%3A%2F%2Fwww.kaggle.com%2Fdatasets%2Fmeharshanali%2Fnvidia-stocks-data-2025)
+*   **Visualization**: matplotlib, seaborn
+*   **News API Integration**: newsapi-python, gnews, beautifulsoup4, requests
+*   **Natural Language Processing & Sentiment Analysis**: textblob, transformers (ProsusAI/finbert model for financial sentiment), torch
+*   **Time Series Modeling**: prophet (Facebook Prophet), statsmodels (for SARIMAX)
+*   **Machine Learning (General)**: scikit-learn (for MinMaxScaler, mean_absolute_error, mean_squared_error)
+
+#### 📈 Model Training Results
+
+| Model           | MAE (Mean Absolute Error) | RMSE (Root Mean Squared Error) |
+|-----------------|---------------------------|--------------------------------|
+| **SARIMAX (tuned)** | **0.0826**                | **0.1036**                     |
+| Prophet         | 0.2136                    | 0.2288                         |
+
+**Key Finding:** The SARIMAX model demonstrated superior performance, achieving a **61.3% improvement** in Mean Absolute Error compared to the Prophet model. Based on these evaluation metrics, the **SARIMAX (tuned)** model was selected as the best performing model. It has been saved as `best_model.pkl` for integration into the GoSense backend system to power the Stock Forecasting Dashboard. This model is expected to provide more accurate and reliable stock price predictions.
+
 ## 📦 Installation & Setup
 
 ### Prerequisites
