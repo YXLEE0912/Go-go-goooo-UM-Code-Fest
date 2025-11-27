@@ -1,0 +1,9 @@
+Team Go go goooo's UM Code Fest 2025 links
+Domain: Xenber Track 1
+MVP: GoSense
+
+Demo Video (Youtube)
+https://youtu.be/AQo0N60C73w
+
+Prototype website
+https://go-go-goooo-um-code-fest-nine.vercel.app/

@@ -2,6 +2,9 @@
 
 GoSense is a cutting-edge enterprise dashboard designed for intelligent stock market analysis, forecasting, and strategic decision-making. Built for the **UM Code Fest**, it leverages advanced machine learning (SARIMAX) and Generative AI to provide actionable insights for publicly listed companies (demonstrated with NVIDIA).
 
+## 🎥 Demo
+[GoSense demo video](https://youtu.be/AQo0N60C73w)
+
 ## 🎯 Problem Statement
 Investment teams and corporate finance departments face complex, unstructured financial data.
 *   Making accurate predictions and strategic decisions is time-consuming and error-prone.
