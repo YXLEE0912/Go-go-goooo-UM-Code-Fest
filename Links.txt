@@ -5,5 +5,8 @@ MVP: GoSense
 Demo Video (Youtube)
 https://youtu.be/AQo0N60C73w
 
+Alternative Video link (Drive)
+https://drive.google.com/drive/u/0/folders/1FNlay7UKNywKSEXQJ-d3Tk4HMrhhd3jv
+
 Prototype website
 https://go-go-goooo-um-code-fest-nine.vercel.app/
