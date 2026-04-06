@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Use environment variable or default to localhost:8000
-const BACKEND_URL = process.env.BACKEND_URL || 'https://go-go-goooo-um-code-fest.onrender.com';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://go-go-goooo-um-code-fest-2gfn.onrender.com';
 
 export async function POST(request: NextRequest) {
   try {
