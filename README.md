@@ -4,6 +4,7 @@ GoSense is a cutting-edge enterprise dashboard designed for intelligent stock ma
 
 ## 🎥 Demo
 **Watch the demo here ➡️** [GoSense demo video](https://youtu.be/AQo0N60C73w)
+
 **Alternative demo link ➡️** [Google Drive](https://drive.google.com/drive/u/0/folders/1FNlay7UKNywKSEXQJ-d3Tk4HMrhhd3jv)
 
 ## 🎯 Problem Statement
